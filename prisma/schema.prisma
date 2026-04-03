@@ -1,0 +1,184 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id          String   @id @default(cuid())
+  name        String
+  email       String   @unique
+  avatarUrl   String?
+  venmoHandle String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  purchases    Purchase[]
+  contacts     Contact[]
+  requestDrafts RequestDraft[]
+  auditLogs    AuditLog[]
+}
+
+model Contact {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  email       String?
+  phone       String?
+  venmoHandle String?
+  avatarUrl   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  splitParticipants SplitParticipant[]
+  balance           Balance?
+  requestDrafts     RequestDraft[]
+  settlements       Settlement[]
+
+  @@unique([userId, email])
+}
+
+model Category {
+  id    String @id @default(cuid())
+  name  String @unique
+  icon  String?
+  color String?
+
+  purchases Purchase[]
+}
+
+model Purchase {
+  id         String         @id @default(cuid())
+  userId     String
+  merchant   String
+  amount     Int            // stored in cents
+  tax        Int            @default(0)
+  tip        Int            @default(0)
+  categoryId String?
+  notes      String?
+  date       DateTime       @default(now())
+  source     String         @default("MANUAL")
+  isSplit    Boolean        @default(false)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category         Category?         @relation(fields: [categoryId], references: [id])
+  items            PurchaseItem[]
+  splitParticipants SplitParticipant[]
+  receiptUpload    ReceiptUpload?
+  requestDrafts    RequestDraft[]
+}
+
+model PurchaseItem {
+  id          String  @id @default(cuid())
+  purchaseId  String
+  name        String
+  amount      Int     // cents
+  quantity    Int     @default(1)
+
+  purchase    Purchase          @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  allocations SplitAllocation[]
+}
+
+model SplitParticipant {
+  id         String    @id @default(cuid())
+  purchaseId String
+  contactId  String
+  shareType  String
+  shareValue Int       // cents or percentage * 100 (e.g. 3333 = 33.33%)
+  createdAt  DateTime  @default(now())
+
+  purchase    Purchase          @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  contact     Contact           @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  allocations SplitAllocation[]
+}
+
+model SplitAllocation {
+  id                 String @id @default(cuid())
+  splitParticipantId String
+  purchaseItemId     String
+  amount             Int    // cents
+
+  splitParticipant SplitParticipant @relation(fields: [splitParticipantId], references: [id], onDelete: Cascade)
+  purchaseItem     PurchaseItem     @relation(fields: [purchaseItemId], references: [id], onDelete: Cascade)
+}
+
+model Balance {
+  id          String   @id @default(cuid())
+  contactId   String   @unique
+  totalOwed   Int      @default(0)  // cents — they owe you
+  totalPaid   Int      @default(0)  // cents — they've paid
+  outstanding Int      @default(0)  // computed: totalOwed - totalPaid
+  updatedAt   DateTime @updatedAt
+
+  contact     Contact      @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  settlements Settlement[]
+}
+
+model RequestDraft {
+  id          String        @id @default(cuid())
+  userId      String
+  contactId   String
+  purchaseId  String?
+  amount      Int           // cents
+  message     String
+  status      String        @default("DRAFT")
+  sentAt      DateTime?
+  settledAt   DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contact  Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  purchase Purchase? @relation(fields: [purchaseId], references: [id])
+}
+
+model Settlement {
+  id        String   @id @default(cuid())
+  balanceId String
+  contactId String
+  amount    Int      // cents
+  notes     String?
+  settledAt DateTime @default(now())
+
+  balance Balance @relation(fields: [balanceId], references: [id], onDelete: Cascade)
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+}
+
+model ReceiptUpload {
+  id          String   @id @default(cuid())
+  purchaseId  String   @unique
+  rawText     String?
+  parsedJson  String?  // JSON string of parsed items
+  imageUrl    String?
+  uploadedAt  DateTime @default(now())
+
+  purchase Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String
+  title     String
+  body      String
+  read      Boolean  @default(false)
+  data      String?  // JSON
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String
+  entity    String
+  entityId  String
+  data      String?  // JSON
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
