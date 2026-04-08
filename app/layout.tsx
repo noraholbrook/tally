@@ -23,7 +23,7 @@ export const viewport: Viewport = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  await ensureSeeded();
+  try { await ensureSeeded(); } catch { /* db not available at build time */ }
   return (
     <html lang="en">
       <body className={inter.className}>
