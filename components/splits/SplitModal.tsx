@@ -8,15 +8,14 @@ import { ContactAvatar } from "@/components/shared/ContactAvatar";
 import { AmountDisplay } from "@/components/shared/AmountDisplay";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { createSplit } from "@/lib/actions/splits";
-import { calculateSplit, formatCents } from "@/lib/domain/splits";
+import { calculateSplit, formatCents, parseDollarsToCents } from "@/lib/domain/splits";
 import { useToast } from "@/components/ui/use-toast";
 import { ShareType } from "@/lib/constants";
 import type { Contact, Balance } from "@prisma/client";
 
 type ContactWithBalance = Contact & { balance: Balance | null };
-
 type SplitStep = "prompt" | "select" | "configure" | "preview";
 
 interface SplitModalProps {
@@ -35,6 +34,7 @@ export function SplitModal({ purchaseId, contacts, open, onClose, onSuccess }: S
   const [splitType, setSplitType] = useState<ShareType>(ShareType.EQUAL);
   const [includeTax, setIncludeTax] = useState(true);
   const [includeTip, setIncludeTip] = useState(true);
+  const [shareValues, setShareValues] = useState<Record<string, number>>({});
   const [saving, setSaving] = useState(false);
 
   // Fetch purchase details when modal opens
@@ -56,27 +56,66 @@ export function SplitModal({ purchaseId, contacts, open, onClose, onSuccess }: S
     ? purchase.amount + (includeTax ? purchase.tax : 0) + (includeTip ? purchase.tip : 0)
     : 0;
 
-  const preview =
-    selectedIds.length > 0
-      ? calculateSplit({
-          totalCents,
-          participants: selectedIds.map((id) => ({ contactId: id, shareType: splitType, shareValue: Math.floor(totalCents / selectedIds.length) })),
-        })
-      : null;
+  // Reset shareValues whenever type or selected contacts change
+  useEffect(() => {
+    if (selectedIds.length === 0) return;
+    if (splitType === ShareType.PERCENTAGE) {
+      const evenPct = Math.floor(10000 / selectedIds.length);
+      const vals: Record<string, number> = {};
+      selectedIds.forEach((id, i) => {
+        vals[id] = i === selectedIds.length - 1 ? 10000 - evenPct * (selectedIds.length - 1) : evenPct;
+      });
+      setShareValues(vals);
+    } else if (splitType === ShareType.FIXED) {
+      const evenFixed = Math.floor(totalCents / selectedIds.length);
+      const vals: Record<string, number> = {};
+      selectedIds.forEach((id) => { vals[id] = evenFixed; });
+      setShareValues(vals);
+    }
+  }, [splitType, selectedIds.join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const participants = selectedIds.map((id) => {
+    const sv = splitType === ShareType.EQUAL
+      ? Math.floor(totalCents / selectedIds.length)
+      : (shareValues[id] ?? 0);
+    return { contactId: id, shareType: splitType, shareValue: sv };
+  });
+
+  const preview = selectedIds.length > 0 ? calculateSplit({ totalCents, participants }) : null;
+
+  // Validation for non-equal types
+  const percentageTotal = splitType === ShareType.PERCENTAGE
+    ? selectedIds.reduce((s, id) => s + (shareValues[id] ?? 0), 0)
+    : 10000;
+  const fixedTotal = splitType === ShareType.FIXED
+    ? selectedIds.reduce((s, id) => s + (shareValues[id] ?? 0), 0)
+    : totalCents;
+  const isValid = splitType === ShareType.EQUAL
+    || (splitType === ShareType.PERCENTAGE && percentageTotal === 10000)
+    || (splitType === ShareType.FIXED && fixedTotal <= totalCents);
 
   function toggleContact(id: string) {
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   }
 
+  function updateShareValue(id: string, raw: string) {
+    if (splitType === ShareType.PERCENTAGE) {
+      const pct = Math.round(parseFloat(raw || "0") * 100);
+      setShareValues((prev) => ({ ...prev, [id]: pct }));
+    } else if (splitType === ShareType.FIXED) {
+      setShareValues((prev) => ({ ...prev, [id]: parseDollarsToCents(raw) }));
+    }
+  }
+
   async function handleConfirm() {
     setSaving(true);
     try {
-      const result = await createSplit({ purchaseId, contactIds: selectedIds, splitType, includeTax, includeTip });
+      const result = await createSplit({ purchaseId, contactIds: selectedIds, splitType, includeTax, includeTip, customShares: splitType !== ShareType.EQUAL ? shareValues : undefined });
       if ("error" in result) {
         toast({ title: "Error", description: result.error, variant: "destructive" });
         return;
       }
-      toast({ title: "Split saved!", description: `Split with ${selectedIds.length} ${selectedIds.length === 1 ? "person" : "people"}`, variant: "default" });
+      toast({ title: "Split saved!", description: `Split with ${selectedIds.length} ${selectedIds.length === 1 ? "person" : "people"}` });
       onSuccess();
     } catch {
       toast({ title: "Failed to save split", variant: "destructive" });
@@ -88,6 +127,8 @@ export function SplitModal({ purchaseId, contacts, open, onClose, onSuccess }: S
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-sm p-0 overflow-hidden">
+
+        {/* ── PROMPT ── */}
         {step === "prompt" && (
           <div className="p-6 text-center space-y-5">
             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
@@ -108,6 +149,7 @@ export function SplitModal({ purchaseId, contacts, open, onClose, onSuccess }: S
           </div>
         )}
 
+        {/* ── SELECT CONTACTS ── */}
         {step === "select" && (
           <div className="flex flex-col max-h-[80vh]">
             <div className="p-5 border-b">
@@ -141,11 +183,7 @@ export function SplitModal({ purchaseId, contacts, open, onClose, onSuccess }: S
               )}
             </div>
             <div className="p-4 border-t space-y-2">
-              <Button
-                className="w-full h-12"
-                disabled={selectedIds.length === 0}
-                onClick={() => setStep("configure")}
-              >
+              <Button className="w-full h-12" disabled={selectedIds.length === 0} onClick={() => setStep("configure")}>
                 Continue with {selectedIds.length > 0 ? `${selectedIds.length} ${selectedIds.length === 1 ? "person" : "people"}` : "selection"}
                 <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
@@ -154,13 +192,15 @@ export function SplitModal({ purchaseId, contacts, open, onClose, onSuccess }: S
           </div>
         )}
 
+        {/* ── CONFIGURE ── */}
         {step === "configure" && (
           <div className="flex flex-col max-h-[80vh]">
             <div className="p-5 border-b">
               <DialogTitle>Split options</DialogTitle>
             </div>
             <div className="overflow-y-auto flex-1 p-4 space-y-5">
-              {/* Split type */}
+
+              {/* Split method toggle */}
               <div className="space-y-2">
                 <Label className="text-xs uppercase tracking-wide text-muted-foreground">Split method</Label>
                 <div className="grid grid-cols-3 gap-2">
@@ -196,8 +236,8 @@ export function SplitModal({ purchaseId, contacts, open, onClose, onSuccess }: S
                 </div>
               )}
 
-              {/* Preview */}
-              {preview && (
+              {/* EQUAL — show auto preview */}
+              {splitType === ShareType.EQUAL && preview && (
                 <div className="space-y-2">
                   <Label className="text-xs uppercase tracking-wide text-muted-foreground">Each person pays</Label>
                   {preview.results.map((r) => {
@@ -218,14 +258,97 @@ export function SplitModal({ purchaseId, contacts, open, onClose, onSuccess }: S
                   </div>
                 </div>
               )}
+
+              {/* PERCENTAGE — per-person % inputs */}
+              {splitType === ShareType.PERCENTAGE && (
+                <div className="space-y-3">
+                  <Label className="text-xs uppercase tracking-wide text-muted-foreground">Set percentages</Label>
+                  {selectedIds.map((id) => {
+                    const contact = contacts.find((c) => c.id === id);
+                    const pctValue = ((shareValues[id] ?? 0) / 100).toFixed(0);
+                    return (
+                      <div key={id} className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
+                        {contact && <ContactAvatar name={contact.name} size="sm" />}
+                        <span className="text-sm font-medium flex-1">{contact?.name}</span>
+                        <div className="flex items-center gap-1">
+                          <Input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={pctValue}
+                            onChange={(e) => updateShareValue(id, e.target.value)}
+                            className="w-16 h-8 text-right text-sm"
+                          />
+                          <span className="text-sm text-muted-foreground">%</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div className={`flex justify-between text-xs font-medium px-1 ${percentageTotal === 10000 ? "text-green-600" : "text-destructive"}`}>
+                    <span>Total</span>
+                    <span>{(percentageTotal / 100).toFixed(0)}% {percentageTotal !== 10000 && `(must equal 100%)`}</span>
+                  </div>
+                  {/* Live preview */}
+                  {preview && percentageTotal === 10000 && (
+                    <div className="space-y-1 pt-1">
+                      <Label className="text-xs uppercase tracking-wide text-muted-foreground">Preview</Label>
+                      {preview.results.map((r) => {
+                        const contact = contacts.find((c) => c.id === r.contactId);
+                        return (
+                          <div key={r.contactId} className="flex justify-between text-sm px-1">
+                            <span className="text-muted-foreground">{contact?.name}</span>
+                            <AmountDisplay cents={r.amountCents} size="sm" />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* FIXED — per-person $ inputs */}
+              {splitType === ShareType.FIXED && (
+                <div className="space-y-3">
+                  <Label className="text-xs uppercase tracking-wide text-muted-foreground">Set amounts</Label>
+                  {selectedIds.map((id) => {
+                    const contact = contacts.find((c) => c.id === id);
+                    const dollarValue = ((shareValues[id] ?? 0) / 100).toFixed(2);
+                    return (
+                      <div key={id} className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
+                        {contact && <ContactAvatar name={contact.name} size="sm" />}
+                        <span className="text-sm font-medium flex-1">{contact?.name}</span>
+                        <div className="flex items-center gap-1">
+                          <span className="text-sm text-muted-foreground">$</span>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={dollarValue}
+                            onChange={(e) => updateShareValue(id, e.target.value)}
+                            className="w-20 h-8 text-right text-sm"
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div className={`flex justify-between text-xs font-medium px-1 ${fixedTotal <= totalCents ? "text-green-600" : "text-destructive"}`}>
+                    <span>Allocated</span>
+                    <span>{formatCents(fixedTotal)} of {formatCents(totalCents)}</span>
+                  </div>
+                </div>
+              )}
             </div>
+
             <div className="p-4 border-t space-y-2">
-              <Button className="w-full h-12" onClick={() => setStep("preview")}>Preview split</Button>
+              <Button className="w-full h-12" disabled={!isValid} onClick={() => setStep("preview")}>
+                Preview split
+              </Button>
               <Button variant="ghost" className="w-full" onClick={() => setStep("select")}>Back</Button>
             </div>
           </div>
         )}
 
+        {/* ── PREVIEW ── */}
         {step === "preview" && preview && (
           <div className="flex flex-col max-h-[80vh]">
             <div className="p-5 border-b">
