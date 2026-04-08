@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { Toaster } from "@/components/ui/toaster";
+import { ensureSeeded } from "@/lib/seed-init";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -21,7 +22,8 @@ export const viewport: Viewport = {
   themeColor: "#7c3aed",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  await ensureSeeded();
   return (
     <html lang="en">
       <body className={inter.className}>
