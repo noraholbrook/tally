@@ -22,11 +22,11 @@ type DraftWithRelations = RequestDraft & {
   purchase: (Purchase & { category: Category | null }) | null;
 };
 
-const STATUS_CONFIG = {
-  DRAFT: { label: "Draft", variant: "secondary" as const, icon: Clock },
-  SENT: { label: "Sent", variant: "warning" as const, icon: Send },
-  SETTLED: { label: "Settled", variant: "success" as const, icon: CheckCircle2 },
-  CANCELLED: { label: "Cancelled", variant: "outline" as const, icon: Clock },
+const STATUS_CONFIG: Record<string, { label: string; variant: "secondary" | "warning" | "success" | "outline"; icon: typeof Clock }> = {
+  DRAFT: { label: "Draft", variant: "secondary", icon: Clock },
+  SENT: { label: "Sent", variant: "warning", icon: Send },
+  SETTLED: { label: "Settled", variant: "success", icon: CheckCircle2 },
+  CANCELLED: { label: "Cancelled", variant: "outline", icon: Clock },
 };
 
 export function RequestsClient({ drafts }: { drafts: DraftWithRelations[] }) {
