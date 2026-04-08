@@ -15,6 +15,7 @@ import { formatRelativeDate } from "@/lib/utils";
 import { generateSimulatedPurchase } from "@/lib/actions/purchases";
 import { useToast } from "@/components/ui/use-toast";
 import { SplitModal } from "@/components/splits/SplitModal";
+import { TallyLogo } from "@/components/ui/TallyLogo";
 import type { Purchase, Category, Contact, Balance, SplitParticipant } from "@prisma/client";
 
 type PurchaseWithRelations = Purchase & {
@@ -59,7 +60,7 @@ export function DashboardClient({ purchases, contacts, categories, totalOutstand
   return (
     <>
       <PageHeader
-        title="Tally"
+        logo={<TallyLogo size="md" />}
         subtitle={totalOutstanding > 0 ? `${formatCents(totalOutstanding)} outstanding` : "All settled up"}
         right={
           <div className="flex items-center gap-1">

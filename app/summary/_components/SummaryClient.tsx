@@ -219,7 +219,7 @@ export function SummaryClient({ purchases }: { purchases: PurchaseWithCategory[]
                   <XAxis dataKey="label" tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 10, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${(v / 100).toFixed(0)}`} />
                   <Tooltip content={<BarTooltip />} />
-                  <Bar dataKey="amount" fill="#7c3aed" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="amount" fill="var(--primary)" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
