@@ -20,8 +20,13 @@ export async function createPurchase(formData: FormData) {
   const parsed = purchaseSchema.safeParse(raw);
   if (!parsed.success) return { error: parsed.error.flatten() };
 
+  const { items, ...purchaseData } = parsed.data;
   const purchase = await prisma.purchase.create({
-    data: { userId: DEMO_USER_ID, ...parsed.data },
+    data: {
+      userId: DEMO_USER_ID,
+      ...purchaseData,
+      ...(items && items.length > 0 ? { items: { create: items } } : {}),
+    },
   });
 
   revalidatePath("/");
