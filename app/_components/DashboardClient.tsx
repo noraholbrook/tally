@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Zap, TrendingUp, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,22 @@ export function DashboardClient({ purchases, contacts, categories, totalOutstand
   const [simulating, setSimulating] = useState(false);
 
   const outstandingContacts = contacts.filter((c) => (c.balance?.outstanding ?? 0) > 0).slice(0, 3);
+
+  // Derive recently-split-with contact IDs from purchase history (most recent first, deduped)
+  const recentContactIds = useMemo(() => {
+    const seen = new Set<string>();
+    const ids: string[] = [];
+    for (const p of purchases) {
+      for (const sp of p.splitParticipants) {
+        if (!seen.has(sp.contact.id)) {
+          seen.add(sp.contact.id);
+          ids.push(sp.contact.id);
+        }
+      }
+      if (ids.length >= 4) break;
+    }
+    return ids;
+  }, [purchases]);
 
   async function handleSimulate() {
     setSimulating(true);
@@ -231,6 +247,7 @@ export function DashboardClient({ purchases, contacts, categories, totalOutstand
         <SplitModal
           purchaseId={splitPurchaseId}
           contacts={contacts}
+          recentContactIds={recentContactIds}
           open={!!splitPurchaseId}
           onClose={() => setSplitPurchaseId(null)}
           onSuccess={() => { setSplitPurchaseId(null); router.refresh(); }}

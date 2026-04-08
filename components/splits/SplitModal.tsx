@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Check, ChevronRight, Users } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Check, ChevronRight, Users, Search, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ContactAvatar } from "@/components/shared/ContactAvatar";
@@ -21,12 +21,13 @@ type SplitStep = "prompt" | "select" | "configure" | "preview";
 interface SplitModalProps {
   purchaseId: string;
   contacts: ContactWithBalance[];
+  recentContactIds?: string[];
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export function SplitModal({ purchaseId, contacts, open, onClose, onSuccess }: SplitModalProps) {
+export function SplitModal({ purchaseId, contacts, recentContactIds = [], open, onClose, onSuccess }: SplitModalProps) {
   const { toast } = useToast();
   const [step, setStep] = useState<SplitStep>("prompt");
   const [purchase, setPurchase] = useState<{ merchant: string; amount: number; tax: number; tip: number } | null>(null);
@@ -36,6 +37,7 @@ export function SplitModal({ purchaseId, contacts, open, onClose, onSuccess }: S
   const [includeTip, setIncludeTip] = useState(true);
   const [shareValues, setShareValues] = useState<Record<string, number>>({});
   const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState("");
 
   // Fetch purchase details when modal opens
   useEffect(() => {
@@ -49,6 +51,7 @@ export function SplitModal({ purchaseId, contacts, open, onClose, onSuccess }: S
       setSplitType(ShareType.EQUAL);
       setIncludeTax(true);
       setIncludeTip(true);
+      setSearch("");
     }
   }, [open, purchaseId]);
 
@@ -150,47 +153,103 @@ export function SplitModal({ purchaseId, contacts, open, onClose, onSuccess }: S
         )}
 
         {/* ── SELECT CONTACTS ── */}
-        {step === "select" && (
-          <div className="flex flex-col max-h-[80vh]">
-            <div className="p-5 border-b">
-              <DialogTitle>Who&apos;s splitting?</DialogTitle>
-              <DialogDescription className="text-xs mt-1">Select everyone who shared this purchase</DialogDescription>
-            </div>
-            <div className="overflow-y-auto flex-1 p-4 space-y-2">
-              {contacts.map((contact) => {
-                const selected = selectedIds.includes(contact.id);
-                return (
-                  <button
-                    key={contact.id}
-                    onClick={() => toggleContact(contact.id)}
-                    className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left ${selected ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30"}`}
-                  >
-                    <ContactAvatar name={contact.name} size="md" />
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm">{contact.name}</p>
-                      {contact.venmoHandle && <p className="text-xs text-muted-foreground">{contact.venmoHandle}</p>}
-                    </div>
-                    {selected && (
-                      <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center shrink-0">
-                        <Check className="h-3 w-3 text-white" />
-                      </div>
+        {step === "select" && (() => {
+          const q = search.trim().toLowerCase();
+          const recentContacts = recentContactIds
+            .map((id) => contacts.find((c) => c.id === id))
+            .filter(Boolean) as ContactWithBalance[];
+          const filteredContacts = q
+            ? contacts.filter((c) =>
+                c.name.toLowerCase().includes(q) ||
+                (c.venmoHandle ?? "").toLowerCase().includes(q) ||
+                (c.email ?? "").toLowerCase().includes(q)
+              )
+            : contacts;
+          const showRecent = !q && recentContacts.length > 0;
+          const otherContacts = showRecent
+            ? filteredContacts.filter((c) => !recentContactIds.includes(c.id))
+            : filteredContacts;
+
+          const ContactRow = ({ contact }: { contact: ContactWithBalance }) => {
+            const selected = selectedIds.includes(contact.id);
+            return (
+              <button
+                key={contact.id}
+                onClick={() => toggleContact(contact.id)}
+                className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left ${selected ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30"}`}
+              >
+                <ContactAvatar name={contact.name} size="md" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm">{contact.name}</p>
+                  {contact.venmoHandle && <p className="text-xs text-muted-foreground">{contact.venmoHandle}</p>}
+                </div>
+                {selected && (
+                  <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center shrink-0">
+                    <Check className="h-3 w-3 text-primary-foreground" />
+                  </div>
+                )}
+              </button>
+            );
+          };
+
+          return (
+            <div className="flex flex-col max-h-[85vh]">
+              <div className="p-5 border-b">
+                <DialogTitle>Who&apos;s splitting?</DialogTitle>
+                <DialogDescription className="text-xs mt-1">Select everyone who shared this purchase</DialogDescription>
+                {/* Search bar */}
+                <div className="relative mt-3">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="Search contacts…"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="w-full pl-9 pr-3 h-9 rounded-lg border border-border bg-muted/40 text-sm outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground"
+                    autoComplete="off"
+                  />
+                </div>
+              </div>
+
+              <div className="overflow-y-auto flex-1 p-4 space-y-4">
+                {/* Recently split with */}
+                {showRecent && (
+                  <div className="space-y-2">
+                    <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      <Clock className="h-3 w-3" /> Recently split with
+                    </p>
+                    {recentContacts.map((c) => <ContactRow key={c.id} contact={c} />)}
+                  </div>
+                )}
+
+                {/* All / search results */}
+                {otherContacts.length > 0 && (
+                  <div className="space-y-2">
+                    {showRecent && (
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">All contacts</p>
                     )}
-                  </button>
-                );
-              })}
-              {contacts.length === 0 && (
-                <p className="text-center text-muted-foreground text-sm py-8">No contacts yet. Add some in Contacts.</p>
-              )}
+                    {otherContacts.map((c) => <ContactRow key={c.id} contact={c} />)}
+                  </div>
+                )}
+
+                {filteredContacts.length === 0 && q && (
+                  <p className="text-center text-muted-foreground text-sm py-8">No contacts match &ldquo;{search}&rdquo;</p>
+                )}
+                {contacts.length === 0 && (
+                  <p className="text-center text-muted-foreground text-sm py-8">No contacts yet. Add some in Contacts.</p>
+                )}
+              </div>
+
+              <div className="p-4 border-t space-y-2">
+                <Button className="w-full h-12" disabled={selectedIds.length === 0} onClick={() => setStep("configure")}>
+                  Continue with {selectedIds.length > 0 ? `${selectedIds.length} ${selectedIds.length === 1 ? "person" : "people"}` : "selection"}
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                </Button>
+                <Button variant="ghost" className="w-full" onClick={() => setStep("prompt")}>Back</Button>
+              </div>
             </div>
-            <div className="p-4 border-t space-y-2">
-              <Button className="w-full h-12" disabled={selectedIds.length === 0} onClick={() => setStep("configure")}>
-                Continue with {selectedIds.length > 0 ? `${selectedIds.length} ${selectedIds.length === 1 ? "person" : "people"}` : "selection"}
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
-              <Button variant="ghost" className="w-full" onClick={() => setStep("prompt")}>Back</Button>
-            </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* ── CONFIGURE ── */}
         {step === "configure" && (

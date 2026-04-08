@@ -32,7 +32,7 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 type ContactWithBalance = Contact & { balance: Balance | null };
 
-export function AddPurchaseClient({ categories, contacts }: { categories: Category[]; contacts: ContactWithBalance[] }) {
+export function AddPurchaseClient({ categories, contacts, recentContactIds = [] }: { categories: Category[]; contacts: ContactWithBalance[]; recentContactIds?: string[] }) {
   const router = useRouter();
   const { toast } = useToast();
   const [splitPurchaseId, setSplitPurchaseId] = useState<string | null>(null);
@@ -200,6 +200,7 @@ export function AddPurchaseClient({ categories, contacts }: { categories: Catego
         <SplitModal
           purchaseId={splitPurchaseId}
           contacts={contacts}
+          recentContactIds={recentContactIds}
           open={!!splitPurchaseId}
           onClose={() => { setSplitPurchaseId(null); router.push("/"); }}
           onSuccess={() => { setSplitPurchaseId(null); router.push("/"); }}
