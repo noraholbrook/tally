@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { notFound } from "next/navigation";
 import { getPurchaseById } from "@/lib/actions/purchases";
 import { prisma } from "@/lib/db";
