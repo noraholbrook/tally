@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Zap, TrendingUp } from "lucide-react";
+import { Plus, Zap, TrendingUp, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -62,9 +62,14 @@ export function DashboardClient({ purchases, contacts, categories, totalOutstand
         title="Tally"
         subtitle={totalOutstanding > 0 ? `${formatCents(totalOutstanding)} outstanding` : "All settled up"}
         right={
-          <Button size="icon-sm" variant="ghost" onClick={() => router.push("/purchases/new")}>
-            <Plus className="h-5 w-5" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button size="icon-sm" variant="ghost" onClick={() => router.push("/purchases/new")}>
+              <Plus className="h-5 w-5" />
+            </Button>
+            <Button size="icon-sm" variant="ghost" onClick={() => router.push("/settings")}>
+              <Settings className="h-4 w-4" />
+            </Button>
+          </div>
         }
       />
 
