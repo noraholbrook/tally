@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -34,16 +34,21 @@ type ContactWithBalance = Contact & { balance: Balance | null };
 
 export function AddPurchaseClient({ categories, contacts, recentContactIds = [] }: { categories: Category[]; contacts: ContactWithBalance[]; recentContactIds?: string[] }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const [splitPurchaseId, setSplitPurchaseId] = useState<string | null>(null);
   const [simulating, setSimulating] = useState(false);
   const [activeTab, setActiveTab] = useState<"manual" | "simulate">("manual");
 
+  // Pre-fill from URL params (used by iPhone Shortcut)
+  const prefillMerchant = searchParams.get("merchant") ?? "";
+  const prefillAmount = searchParams.get("amount") ?? "";
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      merchant: "",
-      amount: "",
+      merchant: prefillMerchant,
+      amount: prefillAmount,
       tax: "",
       tip: "",
       date: new Date().toISOString().split("T")[0],
@@ -103,6 +108,14 @@ export function AddPurchaseClient({ categories, contacts, recentContactIds = [] 
             </button>
           ))}
         </div>
+
+        {/* Apple Pay Shortcut banner */}
+        {prefillMerchant && (
+          <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-foreground/5 border border-border text-sm">
+            <Zap className="h-4 w-4 text-primary shrink-0" />
+            <span>Pre-filled from Apple Pay · <span className="font-semibold">{prefillMerchant}</span></span>
+          </div>
+        )}
 
         {activeTab === "simulate" ? (
           <Card className="border-2 border-dashed border-violet-200">
