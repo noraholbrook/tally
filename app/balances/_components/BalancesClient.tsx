@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Search, ChevronRight } from "lucide-react";
-import { PageHeader } from "@/components/layout/PageHeader";
+import { AppHeader } from "@/components/layout/AppHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ContactAvatar } from "@/components/shared/ContactAvatar";
@@ -35,9 +35,8 @@ export function BalancesClient({ contacts }: { contacts: ContactWithBalance[] })
 
   return (
     <>
-      <PageHeader
-        title="People"
-        subtitle={totalOutstanding > 0 ? `${formatCents(totalOutstanding)} outstanding` : "All settled up"}
+      <AppHeader
+        page="People"
         right={
           <Button size="icon-sm" variant="ghost" onClick={() => setShowAdd(true)}>
             <Plus className="h-5 w-5" />

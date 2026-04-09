@@ -5,6 +5,7 @@ import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend,
 } from "recharts";
+import { AppHeader } from "@/components/layout/AppHeader";
 import { startOfWeek, startOfMonth, subMonths, format, isAfter, isEqual } from "date-fns";
 import { formatCents } from "@/lib/domain/splits";
 import type { Purchase, Category } from "@prisma/client";
@@ -120,10 +121,10 @@ export function SummaryClient({ purchases }: { purchases: PurchaseWithCategory[]
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border px-4 pt-12 pb-3">
-        <h1 className="text-2xl font-bold tracking-tight">Summary</h1>
+      <AppHeader page="Summary" />
+      <div className="sticky top-[88px] z-10 bg-background/95 backdrop-blur border-b border-border px-4 pb-3 pt-2">
         {/* Period selector */}
-        <div className="flex gap-2 mt-3 overflow-x-auto pb-1 scrollbar-none">
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
           {(Object.keys(PERIOD_LABELS) as Period[]).map((p) => (
             <button
               key={p}

@@ -6,7 +6,7 @@ import { Search } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { PageHeader } from "@/components/layout/PageHeader";
+import { AppHeader } from "@/components/layout/AppHeader";
 import { AmountDisplay } from "@/components/shared/AmountDisplay";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { formatRelativeDate } from "@/lib/utils";
@@ -28,7 +28,7 @@ export function HistoryClient({ purchases }: { purchases: PurchaseWithRelations[
 
   return (
     <>
-      <PageHeader title="History" subtitle={`${purchases.length} purchases`} />
+      <AppHeader page="History" />
 
       <div className="px-4 py-4 space-y-4">
         <div className="relative">

@@ -5,7 +5,7 @@ import { User, Database, Info, ChevronRight, RotateCcw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { PageHeader } from "@/components/layout/PageHeader";
+import { AppHeader } from "@/components/layout/AppHeader";
 import { ContactAvatar } from "@/components/shared/ContactAvatar";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
@@ -35,7 +35,7 @@ export function SettingsClient({ user, stats }: SettingsClientProps) {
 
   return (
     <>
-      <PageHeader title="Settings" />
+      <AppHeader page="Settings" />
 
       <div className="px-4 py-4 space-y-5">
         {/* Profile */}

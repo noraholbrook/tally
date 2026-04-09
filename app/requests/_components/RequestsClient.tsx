@@ -6,7 +6,7 @@ import { Copy, Send, CheckCircle2, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { PageHeader } from "@/components/layout/PageHeader";
+import { AppHeader } from "@/components/layout/AppHeader";
 import { ContactAvatar } from "@/components/shared/ContactAvatar";
 import { AmountDisplay } from "@/components/shared/AmountDisplay";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -69,7 +69,7 @@ export function RequestsClient({ drafts }: { drafts: DraftWithRelations[] }) {
 
   return (
     <>
-      <PageHeader title="Requests" subtitle={`${active.length} request${active.length !== 1 ? "s" : ""}`} />
+      <AppHeader page="Requests" />
 
       <div className="px-4 py-4 space-y-4">
         {active.length === 0 ? (

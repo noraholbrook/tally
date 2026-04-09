@@ -3,11 +3,11 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Zap, ChevronRight, Settings } from "lucide-react";
+import { AppHeader } from "@/components/layout/AppHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ContactAvatar } from "@/components/shared/ContactAvatar";
 import { AmountDisplay } from "@/components/shared/AmountDisplay";
-import { TallyLogo } from "@/components/ui/TallyLogo";
 import { SplitModal } from "@/components/splits/SplitModal";
 import { formatCents } from "@/lib/domain/splits";
 import { formatRelativeDate } from "@/lib/utils";
@@ -67,15 +67,7 @@ export function DashboardClient({ purchases, contacts, categories, totalOutstand
     <div className="flex flex-col min-h-screen pb-36">
 
       {/* ── Header ── */}
-      <div className="flex items-center justify-between px-5 pt-12 pb-2">
-        <TallyLogo size="md" />
-        <button
-          onClick={() => router.push("/settings")}
-          className="p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground"
-        >
-          <Settings className="h-5 w-5" />
-        </button>
-      </div>
+      <AppHeader page="Home" />
 
       {/* ── Hero ── */}
       <div className="px-5 pt-4 pb-6">
