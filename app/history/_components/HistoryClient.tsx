@@ -51,7 +51,7 @@ export function HistoryClient({ purchases }: { purchases: PurchaseWithRelations[
                     <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                       <p className="text-xs text-muted-foreground">{formatRelativeDate(p.date)}</p>
                       {p.isSplit && <Badge variant="success" className="text-[10px] py-0">Split</Badge>}
-                      {p.source === "SIMULATED" && <Badge variant="secondary" className="text-[10px] py-0">Apple Pay</Badge>}
+                      {(p.source === "SIMULATED" || p.source === "APPLE_PAY") && <Badge variant="secondary" className="text-[10px] py-0">Apple Pay</Badge>}
                     </div>
                   </div>
                   <AmountDisplay cents={p.amount + p.tax + p.tip} size="sm" />

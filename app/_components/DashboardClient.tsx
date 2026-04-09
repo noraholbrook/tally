@@ -145,7 +145,7 @@ export function DashboardClient({ purchases, contacts, categories, totalOutstand
                   <p className="font-semibold text-sm truncate">{purchase.merchant}</p>
                   <div className="flex items-center gap-1.5 mt-0.5">
                     <p className="text-xs text-muted-foreground">{formatRelativeDate(purchase.date)}</p>
-                    {purchase.source === "SIMULATED" && (
+                    {(purchase.source === "SIMULATED" || purchase.source === "APPLE_PAY") && (
                       <span className="text-xs text-muted-foreground">· Apple Pay</span>
                     )}
                     {purchase.source === "RECEIPT" && (
