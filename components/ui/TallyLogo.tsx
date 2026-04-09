@@ -6,28 +6,27 @@ interface TallyLogoProps {
 }
 
 export function TallyLogo({ className, size = "md" }: TallyLogoProps) {
-  const sizes = {
-    sm: { check: "text-base", text: "text-base", gap: "gap-0.5" },
-    md: { check: "text-xl",   text: "text-xl",   gap: "gap-1" },
-    lg: { check: "text-3xl",  text: "text-3xl",  gap: "gap-1.5" },
-  };
-  const s = sizes[size];
+  const iconSize = size === "sm" ? "w-3.5 h-3" : size === "md" ? "w-5 h-4" : "w-7 h-5";
+  const textSize = size === "sm" ? "text-base" : size === "md" ? "text-xl" : "text-3xl";
+  const gap = size === "sm" ? "gap-1" : size === "md" ? "gap-1.5" : "gap-2";
 
   return (
-    <span className={cn("inline-flex items-baseline font-semibold tracking-tight text-foreground", s.gap, className)}>
+    <span className={cn("inline-flex items-center font-semibold tracking-tight text-foreground", gap, className)}>
+      {/* Three horizontal tally lines */}
       <svg
-        viewBox="0 0 14 14"
+        viewBox="0 0 16 12"
         fill="none"
         stroke="currentColor"
-        strokeWidth="2.2"
+        strokeWidth="2"
         strokeLinecap="round"
-        strokeLinejoin="round"
-        className={cn("shrink-0 translate-y-[0.5px]", size === "sm" ? "w-3.5 h-3.5" : size === "md" ? "w-5 h-5" : "w-7 h-7")}
+        className={cn("shrink-0", iconSize)}
         aria-hidden
       >
-        <polyline points="1.5,7.5 5,11 12.5,3" />
+        <line x1="1" y1="2" x2="15" y2="2" />
+        <line x1="1" y1="6" x2="15" y2="6" />
+        <line x1="1" y1="10" x2="15" y2="10" />
       </svg>
-      <span className={cn("font-semibold lowercase", s.text)}>tally</span>
+      <span className={cn("font-semibold lowercase", textSize)}>tally</span>
     </span>
   );
 }
