@@ -1,13 +1,17 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Plus, Search, ChevronRight } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { ContactAvatar } from "@/components/shared/ContactAvatar";
 import { AmountDisplay } from "@/components/shared/AmountDisplay";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { AddContactSheet } from "@/app/contacts/_components/AddContactSheet";
 import { formatCents } from "@/lib/domain/splits";
 import type { Contact, Balance, Settlement } from "@prisma/client";
 
@@ -17,64 +21,135 @@ type ContactWithBalance = Contact & {
 
 export function BalancesClient({ contacts }: { contacts: ContactWithBalance[] }) {
   const router = useRouter();
-  const withBalance = contacts.filter((c) => c.balance && c.balance.totalOwed > 0);
-  const totalOutstanding = withBalance.reduce((s, c) => s + (c.balance?.outstanding ?? 0), 0);
+  const [search, setSearch] = useState("");
+  const [showAdd, setShowAdd] = useState(false);
+
+  const outstanding = contacts.filter((c) => (c.balance?.outstanding ?? 0) > 0);
+  const totalOutstanding = outstanding.reduce((s, c) => s + (c.balance?.outstanding ?? 0), 0);
+
+  const filtered = contacts.filter((c) =>
+    c.name.toLowerCase().includes(search.toLowerCase()) ||
+    (c.venmoHandle ?? "").toLowerCase().includes(search.toLowerCase()) ||
+    (c.email ?? "").toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
     <>
       <PageHeader
-        title="Balances"
-        subtitle={totalOutstanding > 0 ? `${formatCents(totalOutstanding)} total outstanding` : "All settled up"}
+        title="People"
+        subtitle={totalOutstanding > 0 ? `${formatCents(totalOutstanding)} outstanding` : "All settled up"}
+        right={
+          <Button size="icon-sm" variant="ghost" onClick={() => setShowAdd(true)}>
+            <Plus className="h-5 w-5" />
+          </Button>
+        }
       />
 
-      <div className="px-4 py-4 space-y-4">
-        {withBalance.length === 0 ? (
-          <EmptyState
-            icon="✅"
-            title="All settled up"
-            description="No outstanding balances. Add purchases and split them to track who owes what."
-          />
-        ) : (
-          withBalance.map((contact) => {
-            const balance = contact.balance!;
-            const paidPct = balance.totalOwed > 0 ? Math.round((balance.totalPaid / balance.totalOwed) * 100) : 0;
-            return (
-              <Card
-                key={contact.id}
-                className="cursor-pointer hover:shadow-md transition-shadow"
-                onClick={() => router.push(`/contacts/${contact.id}`)}
-              >
-                <CardContent className="p-5">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <ContactAvatar name={contact.name} size="lg" />
-                      <div>
-                        <p className="font-bold">{contact.name}</p>
-                        {contact.venmoHandle && <p className="text-xs text-muted-foreground">{contact.venmoHandle}</p>}
+      <div className="px-4 py-4 space-y-5 pb-24">
+
+        {/* ── Outstanding balances ── */}
+        {outstanding.length > 0 && !search && (
+          <section className="space-y-3">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Outstanding</h2>
+            {outstanding.map((contact) => {
+              const balance = contact.balance!;
+              const paidPct = balance.totalOwed > 0 ? Math.round((balance.totalPaid / balance.totalOwed) * 100) : 0;
+              return (
+                <Card
+                  key={contact.id}
+                  className="cursor-pointer hover:shadow-md transition-shadow"
+                  onClick={() => router.push(`/contacts/${contact.id}`)}
+                >
+                  <CardContent className="p-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <ContactAvatar name={contact.name} size="lg" />
+                        <div>
+                          <p className="font-bold">{contact.name}</p>
+                          {contact.venmoHandle && (
+                            <p className="text-xs text-muted-foreground">{contact.venmoHandle}</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <AmountDisplay cents={balance.outstanding} size="lg" />
+                        <p className="text-xs text-muted-foreground mt-0.5">outstanding</p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <AmountDisplay cents={balance.outstanding} size="lg" />
-                      {balance.outstanding === 0 ? (
-                        <Badge variant="success" className="mt-1">Settled</Badge>
-                      ) : (
-                        <p className="text-xs text-muted-foreground mt-0.5">outstanding</p>
-                      )}
+                    <Progress value={paidPct} className="h-1.5 mb-2" />
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>Paid {formatCents(balance.totalPaid)} of {formatCents(balance.totalOwed)}</span>
+                      <span>{paidPct}%</span>
                     </div>
-                  </div>
-
-                  <Progress value={paidPct} className="h-1.5 mb-2" />
-
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Paid {formatCents(balance.totalPaid)} of {formatCents(balance.totalOwed)}</span>
-                    <span>{paidPct}%</span>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </section>
         )}
+
+        {/* ── All contacts ── */}
+        <section className="space-y-3">
+          {!search && (
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">All Contacts</h2>
+          )}
+
+          {/* Search bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search contacts…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-9 pr-3 h-10 rounded-xl border border-border bg-muted/40 text-sm outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground"
+            />
+          </div>
+
+          {contacts.length === 0 ? (
+            <EmptyState
+              icon="👥"
+              title="No contacts yet"
+              description="Add people you split purchases with"
+              action={<Button onClick={() => setShowAdd(true)}><Plus className="h-4 w-4 mr-2" />Add Contact</Button>}
+            />
+          ) : filtered.length === 0 ? (
+            <EmptyState icon="🔍" title="No results" description={`No contacts match "${search}"`} />
+          ) : (
+            <div className="space-y-2">
+              {filtered.map((contact) => (
+                <button
+                  key={contact.id}
+                  onClick={() => router.push(`/contacts/${contact.id}`)}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl border border-border bg-card hover:shadow-sm transition-all text-left"
+                >
+                  <ContactAvatar name={contact.name} size="md" />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm">{contact.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {contact.venmoHandle ?? contact.email ?? contact.phone ?? "No contact info"}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {(contact.balance?.outstanding ?? 0) > 0 ? (
+                      <AmountDisplay cents={contact.balance!.outstanding} size="sm" />
+                    ) : (contact.balance?.totalOwed ?? 0) > 0 ? (
+                      <Badge variant="success">Settled</Badge>
+                    ) : null}
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
       </div>
+
+      <AddContactSheet
+        open={showAdd}
+        onClose={() => setShowAdd(false)}
+        onSuccess={() => { setShowAdd(false); router.refresh(); }}
+      />
     </>
   );
 }

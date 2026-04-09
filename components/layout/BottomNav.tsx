@@ -1,15 +1,15 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Users, CreditCard, Clock, BarChart2 } from "lucide-react";
+import { Home, Users, Clock, BarChart2, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/", icon: Home, label: "Home" },
-  { href: "/balances", icon: CreditCard, label: "Balances" },
-  { href: "/contacts", icon: Users, label: "Contacts" },
+  { href: "/balances", icon: Users, label: "People" },
   { href: "/history", icon: Clock, label: "History" },
   { href: "/summary", icon: BarChart2, label: "Summary" },
+  { href: "/settings", icon: Settings, label: "Settings" },
 ];
 
 export function BottomNav() {
