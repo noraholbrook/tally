@@ -2,23 +2,36 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Search, ChevronRight } from "lucide-react";
+import { Plus, Search, ChevronRight, DollarSign } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ContactAvatar } from "@/components/shared/ContactAvatar";
 import { AmountDisplay } from "@/components/shared/AmountDisplay";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { AddContactSheet } from "@/app/contacts/_components/AddContactSheet";
+import { updateContact, deleteContact } from "@/lib/actions/contacts";
+import { settleBalance } from "@/lib/actions/settlements";
 import { formatCents } from "@/lib/domain/splits";
 import { buildVenmoRequestUrl, buildVenmoWebUrl } from "@/lib/venmo";
+import { useToast } from "@/components/ui/use-toast";
 import type { Contact, Balance, Settlement } from "@prisma/client";
 
 type ContactWithBalance = Contact & {
   balance: (Balance & { settlements: Settlement[] }) | null;
 };
+
+function formatPhone(raw: string) {
+  const digits = raw.replace(/\D/g, "").slice(0, 10);
+  if (digits.length < 4) return digits;
+  if (digits.length < 7) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+}
 
 function openVenmo(contact: ContactWithBalance) {
   const amountCents = contact.balance?.outstanding ?? 0;
@@ -31,17 +44,92 @@ function openVenmo(contact: ContactWithBalance) {
 
 export function BalancesClient({ contacts }: { contacts: ContactWithBalance[] }) {
   const router = useRouter();
+  const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [showAdd, setShowAdd] = useState(false);
+  const [editContact, setEditContact] = useState<ContactWithBalance | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editVenmo, setEditVenmo] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [settleAmount, setSettleAmount] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [showSettle, setShowSettle] = useState(false);
 
   const outstanding = contacts.filter((c) => (c.balance?.outstanding ?? 0) > 0);
-  const totalOutstanding = outstanding.reduce((s, c) => s + (c.balance?.outstanding ?? 0), 0);
-
   const filtered = contacts.filter((c) =>
     c.name.toLowerCase().includes(search.toLowerCase()) ||
     (c.venmoHandle ?? "").toLowerCase().includes(search.toLowerCase()) ||
     (c.email ?? "").toLowerCase().includes(search.toLowerCase())
   );
+
+  function openEdit(contact: ContactWithBalance) {
+    setEditContact(contact);
+    setEditName(contact.name);
+    setEditVenmo(contact.venmoHandle ?? "");
+    setEditPhone(contact.phone ?? "");
+    setEditEmail(contact.email ?? "");
+    setSettleAmount(contact.balance?.outstanding ? (contact.balance.outstanding / 100).toFixed(2) : "");
+  }
+
+  function closeEdit() {
+    setEditContact(null);
+    setShowSettle(false);
+  }
+
+  async function handleSave() {
+    if (!editContact || !editName.trim()) return;
+    setSaving(true);
+    try {
+      const fd = new FormData();
+      fd.append("name", editName.trim());
+      if (editVenmo) fd.append("venmoHandle", editVenmo);
+      if (editPhone) fd.append("phone", editPhone);
+      if (editEmail) fd.append("email", editEmail);
+      const result = await updateContact(editContact.id, fd);
+      if ("error" in result) throw new Error();
+      toast({ title: "Contact updated!" });
+      closeEdit();
+      router.refresh();
+    } catch {
+      toast({ title: "Error updating contact", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!editContact) return;
+    if (!confirm(`Delete ${editContact.name}? This cannot be undone.`)) return;
+    setSaving(true);
+    try {
+      await deleteContact(editContact.id);
+      toast({ title: `${editContact.name} deleted` });
+      closeEdit();
+      router.refresh();
+    } catch {
+      toast({ title: "Error deleting contact", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleSettle() {
+    if (!editContact) return;
+    setSaving(true);
+    try {
+      const amountCents = Math.round(parseFloat(settleAmount) * 100);
+      await settleBalance(editContact.id, amountCents);
+      toast({ title: `Marked ${formatCents(amountCents)} as settled` });
+      setShowSettle(false);
+      closeEdit();
+      router.refresh();
+    } catch {
+      toast({ title: "Error settling balance", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <>
@@ -54,9 +142,9 @@ export function BalancesClient({ contacts }: { contacts: ContactWithBalance[] })
         }
       />
 
-      <div className="px-4 py-4 space-y-5 pb-24">
+      <div className="px-4 py-4 space-y-5 pb-32">
 
-        {/* ── Outstanding balances ── */}
+        {/* Outstanding balances */}
         {outstanding.length > 0 && !search && (
           <section className="space-y-3">
             <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Outstanding</h2>
@@ -67,7 +155,7 @@ export function BalancesClient({ contacts }: { contacts: ContactWithBalance[] })
                 <Card
                   key={contact.id}
                   className="cursor-pointer hover:shadow-md transition-shadow"
-                  onClick={() => router.push(`/contacts/${contact.id}`)}
+                  onClick={() => openEdit(contact)}
                 >
                   <CardContent className="p-5">
                     <div className="flex items-center justify-between mb-4">
@@ -111,13 +199,11 @@ export function BalancesClient({ contacts }: { contacts: ContactWithBalance[] })
           </section>
         )}
 
-        {/* ── All contacts ── */}
+        {/* All contacts */}
         <section className="space-y-3">
           {!search && (
             <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">All Contacts</h2>
           )}
-
-          {/* Search bar */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
             <input
@@ -143,7 +229,7 @@ export function BalancesClient({ contacts }: { contacts: ContactWithBalance[] })
               {filtered.map((contact) => (
                 <button
                   key={contact.id}
-                  onClick={() => router.push(`/contacts/${contact.id}`)}
+                  onClick={() => openEdit(contact)}
                   className="w-full flex items-center gap-3 p-3 rounded-xl border border-border bg-card hover:shadow-sm transition-all text-left"
                 >
                   <ContactAvatar name={contact.name} size="md" />
@@ -173,6 +259,77 @@ export function BalancesClient({ contacts }: { contacts: ContactWithBalance[] })
         onClose={() => setShowAdd(false)}
         onSuccess={() => { setShowAdd(false); router.refresh(); }}
       />
+
+      {/* Edit contact dialog */}
+      <Dialog open={!!editContact} onOpenChange={(o) => !o && closeEdit()}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Edit Contact</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 mt-2">
+            <div className="space-y-1.5">
+              <Label>Name *</Label>
+              <Input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Jordan Lee" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Venmo Handle</Label>
+              <Input value={editVenmo} onChange={(e) => setEditVenmo(e.target.value)} placeholder="@jordanlee" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Phone</Label>
+              <Input
+                type="tel"
+                placeholder="(XXX) XXX-XXXX"
+                value={editPhone}
+                onChange={(e) => setEditPhone(formatPhone(e.target.value))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Email</Label>
+              <Input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} placeholder="jordan@example.com" />
+            </div>
+
+            {/* Settle balance inline */}
+            {editContact && (editContact.balance?.outstanding ?? 0) > 0 && (
+              <div className="pt-1">
+                {!showSettle ? (
+                  <button
+                    onClick={() => setShowSettle(true)}
+                    className="w-full h-9 rounded-lg border border-border text-sm font-medium hover:bg-muted transition-colors"
+                  >
+                    Mark Settled ({formatCents(editContact.balance!.outstanding)})
+                  </button>
+                ) : (
+                  <div className="space-y-2 rounded-xl border border-border p-3">
+                    <Label>Amount received</Label>
+                    <div className="relative">
+                      <DollarSign className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        className="pl-8"
+                        type="number"
+                        step="0.01"
+                        value={settleAmount}
+                        onChange={(e) => setSettleAmount(e.target.value)}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button variant="outline" size="sm" onClick={() => setShowSettle(false)}>Cancel</Button>
+                      <Button size="sm" onClick={handleSettle} disabled={saving}>Confirm</Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              <Button variant="destructive" onClick={handleDelete} disabled={saving}>Delete</Button>
+              <Button onClick={handleSave} disabled={saving || !editName.trim()}>
+                {saving ? "Saving…" : "Save"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
