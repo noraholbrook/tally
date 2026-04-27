@@ -5,11 +5,25 @@ export const dynamic = "force-dynamic";
 
 export async function POST() {
   try {
-    // Delete in dependency order so foreign keys don't block
+    const contacts = await prisma.contact.findMany({
+      where: { userId: DEMO_USER_ID },
+      select: { id: true, balance: { select: { id: true } } },
+    });
+
+    const contactIds = contacts.map((c) => c.id);
+    const balanceIds = contacts.flatMap((c) => c.balance ? [c.balance.id] : []);
+
+    // Delete in reverse-dependency order
+    if (balanceIds.length > 0) {
+      await prisma.settlement.deleteMany({ where: { balanceId: { in: balanceIds } } });
+      await prisma.balance.deleteMany({ where: { id: { in: balanceIds } } });
+    }
     await prisma.requestDraft.deleteMany({ where: { userId: DEMO_USER_ID } });
     await prisma.auditLog.deleteMany({ where: { userId: DEMO_USER_ID } });
     await prisma.purchase.deleteMany({ where: { userId: DEMO_USER_ID } });
-    await prisma.contact.deleteMany({ where: { userId: DEMO_USER_ID } });
+    if (contactIds.length > 0) {
+      await prisma.contact.deleteMany({ where: { id: { in: contactIds } } });
+    }
 
     return NextResponse.json({ ok: true });
   } catch (e) {
