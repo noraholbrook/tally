@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle, DollarSign, ExternalLink } from "lucide-react";
+import { CheckCircle, DollarSign, ExternalLink, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { settleBalance } from "@/lib/actions/settlements";
+import { updateContact } from "@/lib/actions/contacts";
 import { useToast } from "@/components/ui/use-toast";
 import { formatCents } from "@/lib/domain/splits";
 import { formatRelativeDate } from "@/lib/utils";
@@ -30,8 +31,13 @@ type ContactDetail = Contact & {
 export function ContactDetailClient({ contact }: { contact: ContactDetail }) {
   const router = useRouter();
   const { toast } = useToast();
+  const [showEdit, setShowEdit] = useState(false);
   const [showVenmo, setShowVenmo] = useState(false);
   const [showSettle, setShowSettle] = useState(false);
+  const [editName, setEditName] = useState(contact.name);
+  const [editVenmo, setEditVenmo] = useState(contact.venmoHandle ?? "");
+  const [editPhone, setEditPhone] = useState(contact.phone ?? "");
+  const [editEmail, setEditEmail] = useState(contact.email ?? "");
   const [requestAmount, setRequestAmount] = useState(
     contact.balance?.outstanding ? (contact.balance.outstanding / 100).toFixed(2) : ""
   );
@@ -45,6 +51,34 @@ export function ContactDetailClient({ contact }: { contact: ContactDetail }) {
 
   const balance = contact.balance;
   const paidPct = balance && balance.totalOwed > 0 ? Math.round((balance.totalPaid / balance.totalOwed) * 100) : 0;
+
+  function formatPhone(raw: string) {
+    const digits = raw.replace(/\D/g, "").slice(0, 10);
+    if (digits.length < 4) return digits;
+    if (digits.length < 7) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+  }
+
+  async function handleSaveEdit() {
+    if (!editName.trim()) return;
+    setSaving(true);
+    try {
+      const fd = new FormData();
+      fd.append("name", editName.trim());
+      if (editVenmo) fd.append("venmoHandle", editVenmo);
+      if (editPhone) fd.append("phone", editPhone);
+      if (editEmail) fd.append("email", editEmail);
+      const result = await updateContact(contact.id, fd);
+      if ("error" in result) throw new Error();
+      toast({ title: "Contact updated!" });
+      setShowEdit(false);
+      router.refresh();
+    } catch {
+      toast({ title: "Error updating contact", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  }
 
   function handleOpenVenmo() {
     if (!contact.venmoHandle) {
@@ -89,7 +123,15 @@ export function ContactDetailClient({ contact }: { contact: ContactDetail }) {
 
   return (
     <>
-      <PageHeader title={contact.name} showBack />
+      <PageHeader
+        title={contact.name}
+        showBack
+        right={
+          <Button size="icon-sm" variant="ghost" onClick={() => setShowEdit(true)}>
+            <Pencil className="h-4 w-4" />
+          </Button>
+        }
+      />
 
       <div className="px-4 py-4 space-y-4 pb-24">
         {/* Profile */}
@@ -177,6 +219,47 @@ export function ContactDetailClient({ contact }: { contact: ContactDetail }) {
           </Card>
         )}
       </div>
+
+      {/* Edit Contact Dialog */}
+      <Dialog open={showEdit} onOpenChange={(o) => !o && setShowEdit(false)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Edit Contact</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <div className="space-y-2">
+              <Label>Name *</Label>
+              <Input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Jordan Lee" />
+            </div>
+            <div className="space-y-2">
+              <Label>Venmo Handle</Label>
+              <Input value={editVenmo} onChange={(e) => setEditVenmo(e.target.value)} placeholder="@jordanlee" />
+            </div>
+            <div className="space-y-2">
+              <Label>Phone</Label>
+              <Input
+                type="tel"
+                placeholder="(XXX) XXX-XXXX"
+                value={editPhone}
+                onChange={(e) => setEditPhone(formatPhone(e.target.value))}
+              />
+              {editPhone && editPhone.replace(/\D/g, "").length !== 10 && editPhone.length > 0 && (
+                <p className="text-xs text-destructive">Enter a 10-digit phone number</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} placeholder="jordan@example.com" />
+            </div>
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <Button variant="outline" onClick={() => setShowEdit(false)}>Cancel</Button>
+              <Button onClick={handleSaveEdit} disabled={saving || !editName.trim()}>
+                {saving ? "Saving…" : "Save"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Venmo Request Dialog */}
       <Dialog open={showVenmo} onOpenChange={(o) => !o && setShowVenmo(false)}>
