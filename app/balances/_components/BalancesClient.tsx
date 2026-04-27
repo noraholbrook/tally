@@ -13,11 +13,21 @@ import { Progress } from "@/components/ui/progress";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { AddContactSheet } from "@/app/contacts/_components/AddContactSheet";
 import { formatCents } from "@/lib/domain/splits";
+import { buildVenmoRequestUrl, buildVenmoWebUrl } from "@/lib/venmo";
 import type { Contact, Balance, Settlement } from "@prisma/client";
 
 type ContactWithBalance = Contact & {
   balance: (Balance & { settlements: Settlement[] }) | null;
 };
+
+function openVenmo(contact: ContactWithBalance) {
+  const amountCents = contact.balance?.outstanding ?? 0;
+  const note = `Hey ${contact.name.split(" ")[0]}! Here's your share from Tally 🧾`;
+  const deepLink = buildVenmoRequestUrl({ handle: contact.venmoHandle!, amountCents, note });
+  const webUrl = buildVenmoWebUrl({ handle: contact.venmoHandle!, amountCents, note });
+  window.location.href = deepLink;
+  setTimeout(() => { window.open(webUrl, "_blank"); }, 600);
+}
 
 export function BalancesClient({ contacts }: { contacts: ContactWithBalance[] }) {
   const router = useRouter();
@@ -75,11 +85,25 @@ export function BalancesClient({ contacts }: { contacts: ContactWithBalance[] })
                         <p className="text-xs text-muted-foreground mt-0.5">outstanding</p>
                       </div>
                     </div>
-                    <Progress value={paidPct} className="h-1.5 mb-2" />
-                    <div className="flex justify-between text-xs text-muted-foreground">
+                    <Progress value={paidPct} className="h-1.5 mb-3" />
+                    <div className="flex justify-between text-xs text-muted-foreground mb-3">
                       <span>Paid {formatCents(balance.totalPaid)} of {formatCents(balance.totalOwed)}</span>
                       <span>{paidPct}%</span>
                     </div>
+                    {contact.venmoHandle ? (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); openVenmo(contact); }}
+                        className="w-full h-9 rounded-lg text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-opacity active:opacity-80"
+                        style={{ backgroundColor: "#008CFF" }}
+                      >
+                        <span className="font-bold text-sm">V</span>
+                        Request {formatCents(balance.outstanding)} via Venmo
+                      </button>
+                    ) : (
+                      <p className="text-xs text-center text-muted-foreground">
+                        Add Venmo handle to enable quick requests
+                      </p>
+                    )}
                   </CardContent>
                 </Card>
               );

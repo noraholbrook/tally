@@ -2,11 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Send, CheckCircle, DollarSign } from "lucide-react";
+import { CheckCircle, DollarSign, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { ContactAvatar } from "@/components/shared/ContactAvatar";
 import { AmountDisplay } from "@/components/shared/AmountDisplay";
@@ -15,10 +14,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { createDraft, settleBalance } from "@/lib/actions/settlements";
+import { settleBalance } from "@/lib/actions/settlements";
 import { useToast } from "@/components/ui/use-toast";
 import { formatCents } from "@/lib/domain/splits";
 import { formatRelativeDate } from "@/lib/utils";
+import { buildVenmoRequestUrl, buildVenmoWebUrl } from "@/lib/venmo";
 import type { Contact, Balance, Settlement, SplitParticipant, Purchase, Category, RequestDraft } from "@prisma/client";
 
 type ContactDetail = Contact & {
@@ -30,13 +30,13 @@ type ContactDetail = Contact & {
 export function ContactDetailClient({ contact }: { contact: ContactDetail }) {
   const router = useRouter();
   const { toast } = useToast();
-  const [showRequest, setShowRequest] = useState(false);
+  const [showVenmo, setShowVenmo] = useState(false);
   const [showSettle, setShowSettle] = useState(false);
   const [requestAmount, setRequestAmount] = useState(
     contact.balance?.outstanding ? (contact.balance.outstanding / 100).toFixed(2) : ""
   );
-  const [requestMessage, setRequestMessage] = useState(
-    `Hey ${contact.name.split(" ")[0]}! Sending you a payment request via Tally 🧾`
+  const [requestNote, setRequestNote] = useState(
+    `Hey ${contact.name.split(" ")[0]}! Here's your share from Tally 🧾`
   );
   const [settleAmount, setSettleAmount] = useState(
     contact.balance?.outstanding ? (contact.balance.outstanding / 100).toFixed(2) : ""
@@ -46,19 +46,30 @@ export function ContactDetailClient({ contact }: { contact: ContactDetail }) {
   const balance = contact.balance;
   const paidPct = balance && balance.totalOwed > 0 ? Math.round((balance.totalPaid / balance.totalOwed) * 100) : 0;
 
-  async function handleCreateRequest() {
-    setSaving(true);
-    try {
-      const amountCents = Math.round(parseFloat(requestAmount) * 100);
-      await createDraft(contact.id, amountCents, undefined, requestMessage);
-      toast({ title: "Request draft created!", description: `For ${formatCents(amountCents)}` });
-      setShowRequest(false);
-      router.push("/requests");
-    } catch {
-      toast({ title: "Error creating request", variant: "destructive" });
-    } finally {
-      setSaving(false);
+  function handleOpenVenmo() {
+    if (!contact.venmoHandle) {
+      toast({
+        title: "No Venmo handle",
+        description: `Add ${contact.name}'s Venmo handle first`,
+        variant: "destructive",
+      });
+      return;
     }
+    setShowVenmo(true);
+  }
+
+  function openVenmo() {
+    const amountCents = Math.round(parseFloat(requestAmount) * 100);
+    const deepLink = buildVenmoRequestUrl({ handle: contact.venmoHandle!, amountCents, note: requestNote });
+    const webUrl = buildVenmoWebUrl({ handle: contact.venmoHandle!, amountCents, note: requestNote });
+
+    // Try app deep link; if Venmo isn't installed, fall back to web after 600ms
+    window.location.href = deepLink;
+    setTimeout(() => {
+      window.open(webUrl, "_blank");
+    }, 600);
+
+    setShowVenmo(false);
   }
 
   async function handleSettle() {
@@ -80,14 +91,16 @@ export function ContactDetailClient({ contact }: { contact: ContactDetail }) {
     <>
       <PageHeader title={contact.name} showBack />
 
-      <div className="px-4 py-4 space-y-4">
+      <div className="px-4 py-4 space-y-4 pb-24">
         {/* Profile */}
         <div className="flex flex-col items-center py-4 gap-3">
           <ContactAvatar name={contact.name} size="lg" className="h-20 w-20 text-xl" />
           <div className="text-center">
             <h2 className="text-xl font-bold">{contact.name}</h2>
-            {contact.venmoHandle && <p className="text-muted-foreground text-sm">{contact.venmoHandle}</p>}
-            {contact.email && <p className="text-muted-foreground text-xs">{contact.email}</p>}
+            {contact.venmoHandle && (
+              <p className="text-sm font-medium" style={{ color: "#008CFF" }}>{contact.venmoHandle}</p>
+            )}
+            {contact.email && <p className="text-muted-foreground text-xs mt-0.5">{contact.email}</p>}
           </div>
         </div>
 
@@ -116,15 +129,27 @@ export function ContactDetailClient({ contact }: { contact: ContactDetail }) {
         {/* Actions */}
         {balance && balance.outstanding > 0 && (
           <div className="grid grid-cols-2 gap-3">
-            <Button className="h-14 flex-col gap-1 text-xs" onClick={() => setShowRequest(true)}>
-              <Send className="h-5 w-5" />
-              Venmo Request
-            </Button>
+            <button
+              onClick={handleOpenVenmo}
+              className="h-14 flex flex-col items-center justify-center gap-1 rounded-xl text-white text-xs font-semibold transition-opacity active:opacity-80"
+              style={{ backgroundColor: "#008CFF" }}
+            >
+              {/* Venmo wordmark-style "V" */}
+              <span className="text-lg font-bold leading-none">V</span>
+              <span>Request via Venmo</span>
+            </button>
             <Button variant="outline" className="h-14 flex-col gap-1 text-xs" onClick={() => setShowSettle(true)}>
               <CheckCircle className="h-5 w-5" />
               Mark Settled
             </Button>
           </div>
+        )}
+
+        {/* No venmo handle warning */}
+        {balance && balance.outstanding > 0 && !contact.venmoHandle && (
+          <p className="text-xs text-center text-muted-foreground">
+            Add {contact.name.split(" ")[0]}'s Venmo handle to enable direct requests
+          </p>
         )}
 
         {/* Purchase history */}
@@ -154,26 +179,43 @@ export function ContactDetailClient({ contact }: { contact: ContactDetail }) {
       </div>
 
       {/* Venmo Request Dialog */}
-      <Dialog open={showRequest} onOpenChange={(o) => !o && setShowRequest(false)}>
+      <Dialog open={showVenmo} onOpenChange={(o) => !o && setShowVenmo(false)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Create Venmo Request</DialogTitle>
+            <DialogTitle>Request via Venmo</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-2">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
+              <span style={{ color: "#008CFF" }} className="font-bold">V</span>
+              <span>Requesting from <strong>{contact.venmoHandle}</strong></span>
+            </div>
             <div className="space-y-2">
               <Label>Amount</Label>
               <div className="relative">
                 <DollarSign className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
-                <Input className="pl-8" type="number" step="0.01" value={requestAmount} onChange={(e) => setRequestAmount(e.target.value)} />
+                <Input
+                  className="pl-8"
+                  type="number"
+                  step="0.01"
+                  value={requestAmount}
+                  onChange={(e) => setRequestAmount(e.target.value)}
+                />
               </div>
             </div>
             <div className="space-y-2">
-              <Label>Message</Label>
-              <Textarea rows={3} value={requestMessage} onChange={(e) => setRequestMessage(e.target.value)} />
+              <Label>Note</Label>
+              <Textarea rows={2} value={requestNote} onChange={(e) => setRequestNote(e.target.value)} />
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <Button variant="outline" onClick={() => setShowRequest(false)}>Cancel</Button>
-              <Button onClick={handleCreateRequest} disabled={saving}>{saving ? "Saving…" : "Create Draft"}</Button>
+              <Button variant="outline" onClick={() => setShowVenmo(false)}>Cancel</Button>
+              <button
+                onClick={openVenmo}
+                className="flex items-center justify-center gap-2 h-10 rounded-lg text-white text-sm font-semibold transition-opacity active:opacity-80"
+                style={{ backgroundColor: "#008CFF" }}
+              >
+                <ExternalLink className="h-4 w-4" />
+                Open Venmo
+              </button>
             </div>
           </div>
         </DialogContent>
