@@ -29,10 +29,10 @@ export async function getContactById(id: string) {
 
 export async function createContact(formData: FormData) {
   const raw = {
-    name: formData.get("name") as string,
-    email: formData.get("email") as string,
-    phone: formData.get("phone") as string,
-    venmoHandle: formData.get("venmoHandle") as string,
+    name: (formData.get("name") ?? "") as string,
+    email: (formData.get("email") ?? "") as string,
+    phone: (formData.get("phone") ?? "") as string,
+    venmoHandle: (formData.get("venmoHandle") ?? "") as string,
   };
 
   const parsed = contactSchema.safeParse(raw);
@@ -48,10 +48,10 @@ export async function createContact(formData: FormData) {
 
 export async function updateContact(id: string, formData: FormData) {
   const raw = {
-    name: formData.get("name") as string,
-    email: formData.get("email") as string,
-    phone: formData.get("phone") as string,
-    venmoHandle: formData.get("venmoHandle") as string,
+    name: (formData.get("name") ?? "") as string,
+    email: (formData.get("email") ?? "") as string,
+    phone: (formData.get("phone") ?? "") as string,
+    venmoHandle: (formData.get("venmoHandle") ?? "") as string,
   };
 
   const parsed = contactSchema.safeParse(raw);
