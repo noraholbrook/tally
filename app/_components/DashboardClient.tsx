@@ -177,7 +177,7 @@ export function DashboardClient({ purchases, contacts, categories, totalOutstand
       </section>
 
       {/* ── Simulate Apple Pay — fixed above nav ── */}
-      <div className="fixed bottom-16 left-1/2 -translate-x-1/2 w-full max-w-md px-5 pb-3 pt-2 bg-gradient-to-t from-background via-background/95 to-transparent">
+      <div className="fixed bottom-24 left-1/2 -translate-x-1/2 w-full max-w-md px-5 pb-3 pt-2 bg-gradient-to-t from-background via-background/95 to-transparent">
         <button
           onClick={handleSimulate}
           disabled={simulating}

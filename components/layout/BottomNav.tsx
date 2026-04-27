@@ -29,8 +29,8 @@ export function BottomNav() {
                 isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
               )}
             >
-              <Icon className={cn("h-5 w-5", isActive && "text-primary")} strokeWidth={isActive ? 2.5 : 2} />
-              <span className={cn("text-[10px] font-medium", isActive ? "text-primary" : "text-muted-foreground")}>{label}</span>
+              <Icon className={cn("h-7 w-7", isActive && "text-primary")} strokeWidth={isActive ? 2.5 : 2} />
+              <span className={cn("text-xs font-medium", isActive ? "text-primary" : "text-muted-foreground")}>{label}</span>
             </Link>
           );
         })}
