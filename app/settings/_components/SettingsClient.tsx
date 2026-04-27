@@ -21,15 +21,15 @@ export function SettingsClient({ user, stats }: SettingsClientProps) {
   const router = useRouter();
 
   async function handleReset() {
-    if (!confirm("Reset all demo data? This will re-seed the database.")) return;
+    if (!confirm("Delete all contacts and purchases? This cannot be undone.")) return;
     try {
       const res = await fetch("/api/demo/reset", { method: "POST" });
       if (res.ok) {
-        toast({ title: "Demo data reset!", description: "Fresh seed data loaded" });
+        toast({ title: "All data cleared" });
         router.refresh();
       }
     } catch {
-      toast({ title: "Reset failed", variant: "destructive" });
+      toast({ title: "Failed to clear data", variant: "destructive" });
     }
   }
 
@@ -85,9 +85,9 @@ export function SettingsClient({ user, stats }: SettingsClientProps) {
           <CardContent className="p-5">
             <Button variant="outline" className="w-full h-12 border-destructive/30 text-destructive hover:bg-destructive/5" onClick={handleReset}>
               <RotateCcw className="h-4 w-4 mr-2" />
-              Reset Demo Data
+              Clear All Data
             </Button>
-            <p className="text-xs text-muted-foreground text-center mt-2">Clears all data and reloads seed</p>
+            <p className="text-xs text-muted-foreground text-center mt-2">Deletes all contacts and purchases</p>
           </CardContent>
         </Card>
       </div>
