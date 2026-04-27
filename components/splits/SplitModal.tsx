@@ -60,26 +60,32 @@ export function SplitModal({ purchaseId, contacts, recentContactIds = [], open, 
     : 0;
 
   // Reset shareValues whenever type or selected contacts change
+  // Always divide by N+1 (contacts + Me) so "Me" keeps their own share
   useEffect(() => {
     if (selectedIds.length === 0) return;
+    const total = selectedIds.length + 1; // +1 for Me
     if (splitType === ShareType.PERCENTAGE) {
-      const evenPct = Math.floor(10000 / selectedIds.length);
+      const evenPct = Math.floor(10000 / total);
       const vals: Record<string, number> = {};
-      selectedIds.forEach((id, i) => {
-        vals[id] = i === selectedIds.length - 1 ? 10000 - evenPct * (selectedIds.length - 1) : evenPct;
-      });
+      selectedIds.forEach((id) => { vals[id] = evenPct; });
       setShareValues(vals);
     } else if (splitType === ShareType.FIXED) {
-      const evenFixed = Math.floor(totalCents / selectedIds.length);
+      const evenFixed = Math.floor(totalCents / total);
       const vals: Record<string, number> = {};
       selectedIds.forEach((id) => { vals[id] = evenFixed; });
       setShareValues(vals);
     }
   }, [splitType, selectedIds.join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // For EQUAL, each contact owes totalCents / (N+1); Me keeps the rest
+  const perContactEqual = selectedIds.length > 0
+    ? Math.floor(totalCents / (selectedIds.length + 1))
+    : 0;
+  const myShare = totalCents - perContactEqual * selectedIds.length;
+
   const participants = selectedIds.map((id) => {
     const sv = splitType === ShareType.EQUAL
-      ? Math.floor(totalCents / selectedIds.length)
+      ? perContactEqual
       : (shareValues[id] ?? 0);
     return { contactId: id, shareType: splitType, shareValue: sv };
   });
@@ -295,10 +301,17 @@ export function SplitModal({ purchaseId, contacts, recentContactIds = [], open, 
                 </div>
               )}
 
-              {/* EQUAL — show auto preview */}
+              {/* EQUAL — show auto preview including Me */}
               {splitType === ShareType.EQUAL && preview && (
                 <div className="space-y-2">
                   <Label className="text-xs uppercase tracking-wide text-muted-foreground">Each person pays</Label>
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-primary/5 border border-primary/20">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xs font-bold shrink-0">M</div>
+                      <span className="text-sm font-medium">Me</span>
+                    </div>
+                    <AmountDisplay cents={myShare} size="sm" />
+                  </div>
                   {preview.results.map((r) => {
                     const contact = contacts.find((c) => c.id === r.contactId);
                     return (
@@ -312,7 +325,7 @@ export function SplitModal({ purchaseId, contacts, recentContactIds = [], open, 
                     );
                   })}
                   <div className="flex justify-between pt-1 text-xs text-muted-foreground">
-                    <span>Total split</span>
+                    <span>Total</span>
                     <span>{formatCents(totalCents)}</span>
                   </div>
                 </div>
@@ -348,9 +361,13 @@ export function SplitModal({ purchaseId, contacts, recentContactIds = [], open, 
                     <span>{(percentageTotal / 100).toFixed(0)}% {percentageTotal !== 10000 && `(must equal 100%)`}</span>
                   </div>
                   {/* Live preview */}
-                  {preview && percentageTotal === 10000 && (
+                  {preview && percentageTotal <= 10000 && (
                     <div className="space-y-1 pt-1">
                       <Label className="text-xs uppercase tracking-wide text-muted-foreground">Preview</Label>
+                      <div className="flex justify-between text-sm px-1">
+                        <span className="font-medium">Me</span>
+                        <AmountDisplay cents={totalCents - preview.totalAllocated} size="sm" />
+                      </div>
                       {preview.results.map((r) => {
                         const contact = contacts.find((c) => c.id === r.contactId);
                         return (
@@ -391,8 +408,8 @@ export function SplitModal({ purchaseId, contacts, recentContactIds = [], open, 
                     );
                   })}
                   <div className={`flex justify-between text-xs font-medium px-1 ${fixedTotal <= totalCents ? "text-green-600" : "text-destructive"}`}>
-                    <span>Allocated</span>
-                    <span>{formatCents(fixedTotal)} of {formatCents(totalCents)}</span>
+                    <span>Me keeps</span>
+                    <span>{formatCents(totalCents - fixedTotal)} · {formatCents(fixedTotal)} allocated</span>
                   </div>
                 </div>
               )}
@@ -415,6 +432,17 @@ export function SplitModal({ purchaseId, contacts, recentContactIds = [], open, 
               <DialogDescription className="text-xs mt-1">This will update balances for each person</DialogDescription>
             </div>
             <div className="overflow-y-auto flex-1 p-4 space-y-3">
+              {/* Me row */}
+              <div className="flex items-center justify-between p-4 rounded-xl border border-primary/20 bg-primary/5">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-bold shrink-0">M</div>
+                  <p className="font-semibold text-sm">Me</p>
+                </div>
+                <div className="text-right">
+                  <AmountDisplay cents={totalCents - preview.totalAllocated} size="md" />
+                  <p className="text-xs text-muted-foreground mt-0.5">my share</p>
+                </div>
+              </div>
               {preview.results.map((r) => {
                 const contact = contacts.find((c) => c.id === r.contactId);
                 return (
