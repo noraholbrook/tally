@@ -67,7 +67,7 @@ export function AddContactSheet({ open, onClose, onSuccess }: AddContactSheetPro
               render={({ field }) => (
                 <Input
                   type="tel"
-                  placeholder="(555) 010-0100"
+                  placeholder="(XXX) XXX-XXXX"
                   value={field.value ?? ""}
                   onChange={(e) => field.onChange(formatPhone(e.target.value))}
                 />
