@@ -1,12 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { prisma, DEMO_USER_ID } from "@/lib/db";
+import { prisma } from "@/lib/db";
+import { getCurrentUserId } from "@/lib/auth-utils";
 import { createRequestDraft, markDraftSent, markDraftSettled } from "@/lib/domain/settlements";
 import { applySettlement } from "@/lib/domain/balances";
 
 export async function createDraft(contactId: string, amount: number, purchaseId?: string, message?: string) {
-  const draftId = await createRequestDraft({ userId: DEMO_USER_ID, contactId, amount, purchaseId, message });
+  const userId = await getCurrentUserId();
+  const draftId = await createRequestDraft({ userId, contactId, amount, purchaseId, message });
   revalidatePath("/requests");
   return { draftId };
 }
@@ -32,8 +34,9 @@ export async function settleBalance(contactId: string, amountCents: number, note
 }
 
 export async function getRequestDrafts() {
+  const userId = await getCurrentUserId();
   return prisma.requestDraft.findMany({
-    where: { userId: DEMO_USER_ID },
+    where: { userId },
     include: { contact: true, purchase: { include: { category: true } } },
     orderBy: { createdAt: "desc" },
   });

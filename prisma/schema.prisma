@@ -10,6 +10,7 @@ model User {
   id          String   @id @default(cuid())
   name        String
   email       String   @unique
+  password    String?
   avatarUrl   String?
   venmoHandle String?
   createdAt   DateTime @default(now())

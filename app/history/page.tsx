@@ -1,10 +1,12 @@
 export const dynamic = "force-dynamic";
-import { prisma, DEMO_USER_ID } from "@/lib/db";
+import { prisma } from "@/lib/db";
+import { getCurrentUserId } from "@/lib/auth-utils";
 import { HistoryClient } from "./_components/HistoryClient";
 
 export default async function HistoryPage() {
+  const userId = await getCurrentUserId();
   const purchases = await prisma.purchase.findMany({
-    where: { userId: DEMO_USER_ID },
+    where: { userId },
     include: { category: true, splitParticipants: { include: { contact: true } } },
     orderBy: { date: "desc" },
   });

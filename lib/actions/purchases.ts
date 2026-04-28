@@ -1,11 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { prisma, DEMO_USER_ID } from "@/lib/db";
+import { prisma } from "@/lib/db";
+import { getCurrentUserId } from "@/lib/auth-utils";
 import { purchaseSchema } from "@/lib/validations/purchase";
 import { PurchaseSource } from "@/lib/constants";
 
 export async function createPurchase(formData: FormData) {
+  const userId = await getCurrentUserId();
+
   const raw = {
     merchant: formData.get("merchant") as string,
     amount: formData.get("amount") as string,
@@ -23,7 +26,7 @@ export async function createPurchase(formData: FormData) {
   const { items, ...purchaseData } = parsed.data;
   const purchase = await prisma.purchase.create({
     data: {
-      userId: DEMO_USER_ID,
+      userId,
       ...purchaseData,
       ...(items && items.length > 0 ? { items: { create: items } } : {}),
     },
@@ -34,15 +37,17 @@ export async function createPurchase(formData: FormData) {
 }
 
 export async function getDashboardData() {
+  const userId = await getCurrentUserId();
+
   const [purchases, contacts, categories] = await Promise.all([
     prisma.purchase.findMany({
-      where: { userId: DEMO_USER_ID },
+      where: { userId },
       include: { category: true, splitParticipants: { include: { contact: true } } },
       orderBy: { date: "desc" },
       take: 10,
     }),
     prisma.contact.findMany({
-      where: { userId: DEMO_USER_ID },
+      where: { userId },
       include: { balance: true },
       orderBy: { name: "asc" },
     }),
@@ -66,7 +71,6 @@ export async function getPurchaseById(id: string) {
   });
 }
 
-// Simulated Apple Pay merchants
 const SIM_MERCHANTS = [
   { name: "Starbucks", category: "Food & Drink", min: 500, max: 1500 },
   { name: "Chipotle", category: "Food & Drink", min: 1000, max: 2500 },
@@ -83,6 +87,7 @@ const SIM_MERCHANTS = [
 ];
 
 export async function generateSimulatedPurchase() {
+  const userId = await getCurrentUserId();
   const merchant = SIM_MERCHANTS[Math.floor(Math.random() * SIM_MERCHANTS.length)];
   const amount = Math.floor(Math.random() * (merchant.max - merchant.min) + merchant.min);
   const taxRate = 0.08875;
@@ -92,7 +97,7 @@ export async function generateSimulatedPurchase() {
 
   const purchase = await prisma.purchase.create({
     data: {
-      userId: DEMO_USER_ID,
+      userId,
       merchant: merchant.name,
       amount,
       tax,

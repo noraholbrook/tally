@@ -1,8 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { BottomNav } from "@/components/layout/BottomNav";
+import { ConditionalNav } from "@/components/layout/ConditionalNav";
 import { Toaster } from "@/components/ui/toaster";
+import { Providers } from "./providers";
 import { ensureSeeded } from "@/lib/seed-init";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -27,11 +28,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en">
       <body className={inter.className}>
-        <div className="min-h-screen bg-background flex flex-col max-w-md mx-auto relative">
-          <main className="flex-1 pb-20">{children}</main>
-          <BottomNav />
-        </div>
-        <Toaster />
+        <Providers>
+          <div className="min-h-screen bg-background flex flex-col max-w-md mx-auto relative">
+            <main className="flex-1 pb-20">{children}</main>
+            <ConditionalNav />
+          </div>
+          <Toaster />
+        </Providers>
       </body>
     </html>
   );

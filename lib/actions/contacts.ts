@@ -1,12 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { prisma, DEMO_USER_ID } from "@/lib/db";
+import { prisma } from "@/lib/db";
+import { getCurrentUserId } from "@/lib/auth-utils";
 import { contactSchema } from "@/lib/validations/contact";
 
 export async function getContacts() {
+  const userId = await getCurrentUserId();
   return prisma.contact.findMany({
-    where: { userId: DEMO_USER_ID },
+    where: { userId },
     include: { balance: true },
     orderBy: { name: "asc" },
   });
@@ -28,6 +30,8 @@ export async function getContactById(id: string) {
 }
 
 export async function createContact(formData: FormData) {
+  const userId = await getCurrentUserId();
+
   const raw = {
     name: (formData.get("name") ?? "") as string,
     email: (formData.get("email") ?? "") as string,
@@ -38,7 +42,6 @@ export async function createContact(formData: FormData) {
   const parsed = contactSchema.safeParse(raw);
   if (!parsed.success) return { error: parsed.error.flatten() };
 
-  // Convert empty strings to null so unique DB constraints aren't violated
   const data = {
     ...parsed.data,
     email: parsed.data.email || null,
@@ -47,7 +50,7 @@ export async function createContact(formData: FormData) {
   };
 
   const contact = await prisma.contact.create({
-    data: { userId: DEMO_USER_ID, ...data },
+    data: { userId, ...data },
   });
 
   revalidatePath("/contacts");

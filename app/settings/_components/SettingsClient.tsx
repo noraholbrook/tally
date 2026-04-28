@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
 import { User, Database, Info, ChevronRight, RotateCcw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -88,6 +89,14 @@ export function SettingsClient({ user, stats }: SettingsClientProps) {
               Clear All Data
             </Button>
             <p className="text-xs text-muted-foreground text-center mt-2">Deletes all contacts and purchases</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-5">
+            <Button variant="outline" className="w-full h-12" onClick={() => signOut({ callbackUrl: "/login" })}>
+              Sign Out
+            </Button>
           </CardContent>
         </Card>
       </div>

@@ -2,7 +2,7 @@
  * Settlement and Venmo draft domain logic.
  */
 
-import { prisma, DEMO_USER_ID } from "@/lib/db";
+import { prisma } from "@/lib/db";
 import { DraftStatus } from "@/lib/constants";
 import { formatCents } from "./splits";
 

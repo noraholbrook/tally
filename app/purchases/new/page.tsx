@@ -1,14 +1,16 @@
 export const dynamic = "force-dynamic";
 import { Suspense } from "react";
-import { prisma, DEMO_USER_ID } from "@/lib/db";
+import { prisma } from "@/lib/db";
+import { getCurrentUserId } from "@/lib/auth-utils";
 import { AddPurchaseClient } from "./_components/AddPurchaseClient";
 
 export default async function NewPurchasePage() {
+  const userId = await getCurrentUserId();
   const [categories, contacts, recentSplits] = await Promise.all([
     prisma.category.findMany({ orderBy: { name: "asc" } }),
-    prisma.contact.findMany({ where: { userId: DEMO_USER_ID }, include: { balance: true }, orderBy: { name: "asc" } }),
+    prisma.contact.findMany({ where: { userId }, include: { balance: true }, orderBy: { name: "asc" } }),
     prisma.splitParticipant.findMany({
-      where: { purchase: { userId: DEMO_USER_ID } },
+      where: { purchase: { userId } },
       orderBy: { purchase: { date: "desc" } },
       include: { contact: true },
       take: 20,
