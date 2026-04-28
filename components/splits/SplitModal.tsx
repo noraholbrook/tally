@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ContactAvatar } from "@/components/shared/ContactAvatar";
 import { AmountDisplay } from "@/components/shared/AmountDisplay";
-import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { createSplit } from "@/lib/actions/splits";
@@ -14,6 +13,8 @@ import { calculateSplit, formatCents, parseDollarsToCents } from "@/lib/domain/s
 import { useToast } from "@/components/ui/use-toast";
 import { ShareType } from "@/lib/constants";
 import type { Contact, Balance } from "@prisma/client";
+
+// Tax and tip are always included in the split total
 
 type ContactWithBalance = Contact & { balance: Balance | null };
 type SplitStep = "prompt" | "select" | "configure" | "preview";
@@ -33,8 +34,6 @@ export function SplitModal({ purchaseId, contacts, recentContactIds = [], open, 
   const [purchase, setPurchase] = useState<{ merchant: string; amount: number; tax: number; tip: number } | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [splitType, setSplitType] = useState<ShareType>(ShareType.EQUAL);
-  const [includeTax, setIncludeTax] = useState(true);
-  const [includeTip, setIncludeTip] = useState(true);
   const [shareValues, setShareValues] = useState<Record<string, number>>({});
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
@@ -49,14 +48,12 @@ export function SplitModal({ purchaseId, contacts, recentContactIds = [], open, 
       setStep("prompt");
       setSelectedIds([]);
       setSplitType(ShareType.EQUAL);
-      setIncludeTax(true);
-      setIncludeTip(true);
       setSearch("");
     }
   }, [open, purchaseId]);
 
   const totalCents = purchase
-    ? purchase.amount + (includeTax ? purchase.tax : 0) + (includeTip ? purchase.tip : 0)
+    ? purchase.amount + purchase.tax + purchase.tip
     : 0;
 
   // Reset shareValues whenever type or selected contacts change
@@ -119,7 +116,7 @@ export function SplitModal({ purchaseId, contacts, recentContactIds = [], open, 
   async function handleConfirm() {
     setSaving(true);
     try {
-      const result = await createSplit({ purchaseId, contactIds: selectedIds, splitType, includeTax, includeTip, customShares: splitType !== ShareType.EQUAL ? shareValues : undefined });
+      const result = await createSplit({ purchaseId, contactIds: selectedIds, splitType, includeTax: true, includeTip: true, customShares: splitType !== ShareType.EQUAL ? shareValues : undefined });
       if ("error" in result) {
         toast({ title: "Error", description: result.error, variant: "destructive" });
         return;
@@ -281,25 +278,6 @@ export function SplitModal({ purchaseId, contacts, recentContactIds = [], open, 
                 </div>
               </div>
 
-              {/* Tax/tip toggles */}
-              {purchase && purchase.tax > 0 && (
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-sm font-medium">Include tax</Label>
-                    <p className="text-xs text-muted-foreground">{formatCents(purchase.tax)}</p>
-                  </div>
-                  <Switch checked={includeTax} onCheckedChange={setIncludeTax} />
-                </div>
-              )}
-              {purchase && purchase.tip > 0 && (
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-sm font-medium">Include tip</Label>
-                    <p className="text-xs text-muted-foreground">{formatCents(purchase.tip)}</p>
-                  </div>
-                  <Switch checked={includeTip} onCheckedChange={setIncludeTip} />
-                </div>
-              )}
 
               {/* EQUAL — show auto preview including Me */}
               {splitType === ShareType.EQUAL && preview && (
