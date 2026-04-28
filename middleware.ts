@@ -1,25 +1,7 @@
-import { auth } from "@/auth";
-import { NextResponse } from "next/server";
+import NextAuth from "next-auth";
+import { authConfig } from "./auth.config";
 
-export default auth((req) => {
-  const { pathname } = req.nextUrl;
-  const isLoggedIn = !!req.auth?.user;
-
-  const isPublic =
-    pathname.startsWith("/login") ||
-    pathname.startsWith("/api/auth") ||
-    pathname.startsWith("/api/purchases/quick");
-
-  if (!isLoggedIn && !isPublic) {
-    return NextResponse.redirect(new URL("/login", req.url));
-  }
-
-  if (isLoggedIn && pathname === "/login") {
-    return NextResponse.redirect(new URL("/", req.url));
-  }
-
-  return NextResponse.next();
-});
+export default NextAuth(authConfig).auth;
 
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico|icon|apple-icon|manifest.json).*)"],

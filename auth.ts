@@ -2,9 +2,10 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
+import { authConfig } from "./auth.config";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  session: { strategy: "jwt" },
+  ...authConfig,
   providers: [
     Credentials({
       credentials: {
@@ -17,23 +18,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           where: { email: credentials.email as string },
         });
         if (!user || !user.password) return null;
-        const valid = await bcrypt.compare(credentials.password as string, user.password);
+        const valid = await bcrypt.compare(
+          credentials.password as string,
+          user.password
+        );
         if (!valid) return null;
         return { id: user.id, email: user.email, name: user.name };
       },
     }),
   ],
-  callbacks: {
-    jwt({ token, user }) {
-      if (user?.id) token.id = user.id;
-      return token;
-    },
-    session({ session, token }) {
-      if (token.id) session.user.id = token.id as string;
-      return session;
-    },
-  },
-  pages: {
-    signIn: "/login",
-  },
 });
