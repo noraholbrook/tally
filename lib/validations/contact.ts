@@ -6,7 +6,7 @@ export const contactSchema = z.object({
   phone: z.string().max(20).optional().or(z.literal("")),
   venmoHandle: z
     .string()
-    .regex(/^@?[\w.]+$/, "Invalid Venmo handle")
+    .regex(/^@?[\w.\-]+$/, "Invalid Venmo handle")
     .optional()
     .or(z.literal(""))
     .transform((v) => (v && !v.startsWith("@") ? `@${v}` : v)),
