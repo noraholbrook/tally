@@ -16,24 +16,27 @@ model User {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  purchases    Purchase[]
-  contacts     Contact[]
-  requestDrafts RequestDraft[]
-  auditLogs    AuditLog[]
+  purchases       Purchase[]
+  contacts        Contact[]
+  requestDrafts   RequestDraft[]
+  auditLogs       AuditLog[]
+  linkedAsContact Contact[]      @relation("LinkedContacts")
 }
 
 model Contact {
-  id          String   @id @default(cuid())
-  userId      String
-  name        String
-  email       String?
-  phone       String?
-  venmoHandle String?
-  avatarUrl   String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String   @id @default(cuid())
+  userId       String
+  name         String
+  email        String?
+  phone        String?
+  venmoHandle  String?
+  avatarUrl    String?
+  linkedUserId String?  // set when contact's email matches a registered Tally user
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  linkedUser        User?              @relation("LinkedContacts", fields: [linkedUserId], references: [id], onDelete: SetNull)
   splitParticipants SplitParticipant[]
   balance           Balance?
   requestDrafts     RequestDraft[]

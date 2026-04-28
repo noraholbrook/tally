@@ -5,6 +5,18 @@ import { prisma } from "@/lib/db";
 import { getCurrentUserId } from "@/lib/auth-utils";
 import { contactSchema } from "@/lib/validations/contact";
 
+/** If the contact's email matches a registered user, link them. */
+async function tryAutoLink(contactId: string, email: string | null | undefined) {
+  if (!email) return;
+  const matchedUser = await prisma.user.findUnique({ where: { email } });
+  if (matchedUser) {
+    await prisma.contact.update({
+      where: { id: contactId },
+      data: { linkedUserId: matchedUser.id },
+    });
+  }
+}
+
 export async function getContacts() {
   const userId = await getCurrentUserId();
   return prisma.contact.findMany({
@@ -53,6 +65,8 @@ export async function createContact(formData: FormData) {
     data: { userId, ...data },
   });
 
+  await tryAutoLink(contact.id, data.email);
+
   revalidatePath("/contacts");
   return { contactId: contact.id };
 }
@@ -76,6 +90,8 @@ export async function updateContact(id: string, formData: FormData) {
   };
 
   await prisma.contact.update({ where: { id }, data });
+  await tryAutoLink(id, data.email);
+
   revalidatePath("/contacts");
   revalidatePath(`/contacts/${id}`);
   return { success: true };

@@ -22,6 +22,22 @@ export function buildVenmoRequestUrl({
   return `venmo://paycharge?txn=charge&recipients=${username}&amount=${amount}&note=${encodedNote}`;
 }
 
+/** Pay someone (txn=pay — you send money to them) */
+export function buildVenmoPayUrl({
+  handle,
+  amountCents,
+  note,
+}: {
+  handle: string;
+  amountCents: number;
+  note?: string;
+}): string {
+  const username = handle.startsWith("@") ? handle.slice(1) : handle;
+  const amount = (amountCents / 100).toFixed(2);
+  const encodedNote = encodeURIComponent(note ?? "Payment via Tally");
+  return `venmo://paycharge?txn=pay&recipients=${username}&amount=${amount}&note=${encodedNote}`;
+}
+
 /** Web fallback if the app isn't installed */
 export function buildVenmoWebUrl({
   handle,
