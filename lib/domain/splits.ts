@@ -36,7 +36,7 @@ export interface SplitPreview {
  * Handles rounding by distributing remainder cents to first participants.
  */
 export function calculateSplit(input: SplitInput): SplitPreview {
-  const { totalCents, participants } = input;
+  const { totalCents, participants, totalPeople } = input;
 
   if (participants.length === 0) {
     return { results: [], totalAllocated: 0, remainder: totalCents, isBalanced: false };
