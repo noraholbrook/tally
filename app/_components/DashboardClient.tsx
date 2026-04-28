@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Zap, ChevronRight, Settings } from "lucide-react";
+import { Zap, ChevronRight, Settings, PenLine } from "lucide-react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -176,8 +176,8 @@ export function DashboardClient({ purchases, contacts, categories, totalOutstand
         )}
       </section>
 
-      {/* ── Simulate Apple Pay — fixed above nav ── */}
-      <div className="fixed bottom-24 left-1/2 -translate-x-1/2 w-full max-w-md px-5 pb-3 pt-2 bg-gradient-to-t from-background via-background/95 to-transparent">
+      {/* ── Action buttons — fixed above nav ── */}
+      <div className="fixed bottom-24 left-1/2 -translate-x-1/2 w-full max-w-md px-5 pb-3 pt-2 bg-gradient-to-t from-background via-background/95 to-transparent space-y-2">
         <button
           onClick={handleSimulate}
           disabled={simulating}
@@ -185,6 +185,13 @@ export function DashboardClient({ purchases, contacts, categories, totalOutstand
         >
           <Zap className="h-4 w-4" />
           {simulating ? "Processing…" : "Simulate Apple Pay"}
+        </button>
+        <button
+          onClick={() => router.push("/purchases/new")}
+          className="w-full h-12 rounded-2xl border border-border bg-background text-foreground font-semibold text-sm flex items-center justify-center gap-2 transition-opacity active:scale-[0.98]"
+        >
+          <PenLine className="h-4 w-4" />
+          Manual Entry
         </button>
       </div>
 
