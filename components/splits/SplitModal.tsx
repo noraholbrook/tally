@@ -90,7 +90,7 @@ export function SplitModal({ purchaseId, contacts, recentContactIds = [], open, 
     return { contactId: id, shareType: splitType, shareValue: sv };
   });
 
-  const preview = selectedIds.length > 0 ? calculateSplit({ totalCents, participants }) : null;
+  const preview = selectedIds.length > 0 ? calculateSplit({ totalCents, participants, totalPeople: selectedIds.length + 1 }) : null;
 
   // Validation for non-equal types
   const percentageTotal = splitType === ShareType.PERCENTAGE

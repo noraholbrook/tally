@@ -12,6 +12,11 @@ export interface SplitInput {
     shareType: ShareType;
     shareValue: number; // cents (FIXED), percentage * 100 (PERCENTAGE), or ignored (EQUAL)
   }>;
+  /**
+   * For EQUAL splits: the true headcount including "Me".
+   * Defaults to participants.length if omitted (legacy behaviour).
+   */
+  totalPeople?: number;
 }
 
 export interface SplitResult {
@@ -43,7 +48,7 @@ export function calculateSplit(input: SplitInput): SplitPreview {
 
   switch (splitType) {
     case ShareType.EQUAL:
-      results = calculateEqual(totalCents, participants.map((p) => p.contactId));
+      results = calculateEqual(totalCents, participants.map((p) => p.contactId), totalPeople);
       break;
 
     case ShareType.PERCENTAGE:
@@ -74,8 +79,8 @@ export function calculateSplit(input: SplitInput): SplitPreview {
   };
 }
 
-function calculateEqual(totalCents: number, contactIds: string[]): SplitResult[] {
-  const n = contactIds.length;
+function calculateEqual(totalCents: number, contactIds: string[], totalPeople?: number): SplitResult[] {
+  const n = totalPeople ?? contactIds.length;
   const base = Math.floor(totalCents / n);
   const extra = totalCents - base * n; // remainder cents (0 to n-1)
 

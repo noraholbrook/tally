@@ -25,14 +25,17 @@ export async function createSplit(input: CreateSplitInput) {
   if (includeTax) totalCents += purchase.tax;
   if (includeTip) totalCents += purchase.tip;
 
+  // +1 for "Me" — contacts only owe their portion, not the full total
+  const totalPeople = contactIds.length + 1;
+
   // Build participants
   const participants = contactIds.map((contactId) => {
-    const shareValue = customShares?.[contactId] ?? Math.floor(totalCents / contactIds.length);
+    const shareValue = customShares?.[contactId] ?? Math.floor(totalCents / totalPeople);
     return { contactId, shareType: splitType, shareValue };
   });
 
   // Calculate split
-  const splitResult = calculateSplit({ totalCents, participants });
+  const splitResult = calculateSplit({ totalCents, participants, totalPeople });
 
   // Persist in a transaction
   await prisma.$transaction(async (tx) => {
@@ -77,10 +80,12 @@ export async function getSplitPreview(input: CreateSplitInput) {
   if (includeTax) totalCents += purchase.tax;
   if (includeTip) totalCents += purchase.tip;
 
+  const totalPeople = contactIds.length + 1;
+
   const participants = contactIds.map((contactId) => {
-    const shareValue = customShares?.[contactId] ?? Math.floor(totalCents / contactIds.length);
+    const shareValue = customShares?.[contactId] ?? Math.floor(totalCents / totalPeople);
     return { contactId, shareType: splitType, shareValue };
   });
 
-  return calculateSplit({ totalCents, participants });
+  return calculateSplit({ totalCents, participants, totalPeople });
 }

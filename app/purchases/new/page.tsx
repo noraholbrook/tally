@@ -1,4 +1,5 @@
 export const dynamic = "force-dynamic";
+import { Suspense } from "react";
 import { prisma, DEMO_USER_ID } from "@/lib/db";
 import { AddPurchaseClient } from "./_components/AddPurchaseClient";
 
@@ -14,7 +15,6 @@ export default async function NewPurchasePage() {
     }),
   ]);
 
-  // Dedupe: most recently split with contacts, up to 4
   const seen = new Set<string>();
   const recentContactIds: string[] = [];
   for (const sp of recentSplits) {
@@ -25,5 +25,9 @@ export default async function NewPurchasePage() {
     if (recentContactIds.length >= 4) break;
   }
 
-  return <AddPurchaseClient categories={categories} contacts={contacts} recentContactIds={recentContactIds} />;
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-muted-foreground text-sm">Loading…</div>}>
+      <AddPurchaseClient categories={categories} contacts={contacts} recentContactIds={recentContactIds} />
+    </Suspense>
+  );
 }

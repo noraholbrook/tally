@@ -38,8 +38,16 @@ export async function createContact(formData: FormData) {
   const parsed = contactSchema.safeParse(raw);
   if (!parsed.success) return { error: parsed.error.flatten() };
 
+  // Convert empty strings to null so unique DB constraints aren't violated
+  const data = {
+    ...parsed.data,
+    email: parsed.data.email || null,
+    phone: parsed.data.phone || null,
+    venmoHandle: parsed.data.venmoHandle || null,
+  };
+
   const contact = await prisma.contact.create({
-    data: { userId: DEMO_USER_ID, ...parsed.data },
+    data: { userId: DEMO_USER_ID, ...data },
   });
 
   revalidatePath("/contacts");
@@ -57,7 +65,14 @@ export async function updateContact(id: string, formData: FormData) {
   const parsed = contactSchema.safeParse(raw);
   if (!parsed.success) return { error: parsed.error.flatten() };
 
-  await prisma.contact.update({ where: { id }, data: parsed.data });
+  const data = {
+    ...parsed.data,
+    email: parsed.data.email || null,
+    phone: parsed.data.phone || null,
+    venmoHandle: parsed.data.venmoHandle || null,
+  };
+
+  await prisma.contact.update({ where: { id }, data });
   revalidatePath("/contacts");
   revalidatePath(`/contacts/${id}`);
   return { success: true };
