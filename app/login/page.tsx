@@ -68,7 +68,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm space-y-8">
         {/* Logo */}
         <div className="flex flex-col items-center gap-3">
-          <TallyLogo size="xl" />
+          <TallyLogo size="lg" />
           <p className="text-sm text-muted-foreground">Split purchases with friends</p>
         </div>
 
