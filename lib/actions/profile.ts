@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { getCurrentUserId } from "@/lib/auth-utils";
+import bcrypt from "bcryptjs";
 
 export async function updateProfile(data: {
   name: string;
@@ -27,5 +28,34 @@ export async function updateProfile(data: {
   });
 
   revalidatePath("/settings");
+  return { success: true };
+}
+
+export async function changePassword(data: {
+  currentPassword: string;
+  newPassword: string;
+}) {
+  const userId = await getCurrentUserId();
+
+  if (!data.newPassword || data.newPassword.length < 8) {
+    return { error: "New password must be at least 8 characters" };
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { password: true },
+  });
+
+  if (!user?.password) return { error: "No password set on this account" };
+
+  const valid = await bcrypt.compare(data.currentPassword, user.password);
+  if (!valid) return { error: "Current password is incorrect" };
+
+  const hashed = await bcrypt.hash(data.newPassword, 12);
+  await prisma.user.update({
+    where: { id: userId },
+    data: { password: hashed },
+  });
+
   return { success: true };
 }

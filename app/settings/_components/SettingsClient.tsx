@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { User, Database, Info, RotateCcw, Pencil, Check, X } from "lucide-react";
+import { User, Database, Info, RotateCcw, Pencil, Check, X, Lock, Eye, EyeOff } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,7 @@ import { AppHeader } from "@/components/layout/AppHeader";
 import { ContactAvatar } from "@/components/shared/ContactAvatar";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
-import { updateProfile } from "@/lib/actions/profile";
+import { updateProfile, changePassword } from "@/lib/actions/profile";
 import type { User as UserType } from "@prisma/client";
 
 interface SettingsClientProps {
@@ -29,6 +29,14 @@ export function SettingsClient({ user, stats }: SettingsClientProps) {
   const [editName, setEditName] = useState(user?.name ?? "");
   const [editVenmo, setEditVenmo] = useState(user?.venmoHandle ?? "");
   const [saving, setSaving] = useState(false);
+
+  const [showPwForm, setShowPwForm] = useState(false);
+  const [currentPw, setCurrentPw] = useState("");
+  const [newPw, setNewPw] = useState("");
+  const [confirmPw, setConfirmPw] = useState("");
+  const [showCurrentPw, setShowCurrentPw] = useState(false);
+  const [showNewPw, setShowNewPw] = useState(false);
+  const [pwSaving, setPwSaving] = useState(false);
 
   async function handleSaveProfile() {
     setSaving(true);
@@ -52,6 +60,29 @@ export function SettingsClient({ user, stats }: SettingsClientProps) {
     setEditName(user?.name ?? "");
     setEditVenmo(user?.venmoHandle ?? "");
     setEditing(false);
+  }
+
+  async function handleChangePassword(e: React.FormEvent) {
+    e.preventDefault();
+    if (newPw !== confirmPw) {
+      toast({ title: "Passwords don't match", variant: "destructive" });
+      return;
+    }
+    setPwSaving(true);
+    try {
+      const result = await changePassword({ currentPassword: currentPw, newPassword: newPw });
+      if ("error" in result) {
+        toast({ title: result.error, variant: "destructive" });
+        return;
+      }
+      toast({ title: "Password updated!" });
+      setCurrentPw(""); setNewPw(""); setConfirmPw("");
+      setShowPwForm(false);
+    } catch {
+      toast({ title: "Failed to update password", variant: "destructive" });
+    } finally {
+      setPwSaving(false);
+    }
   }
 
   async function handleReset() {
@@ -160,6 +191,81 @@ export function SettingsClient({ user, stats }: SettingsClientProps) {
                 <p className="text-xs text-muted-foreground">Requests</p>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Change Password */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Lock className="h-4 w-4" /> Password
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            {!showPwForm ? (
+              <Button variant="outline" className="w-full" onClick={() => setShowPwForm(true)}>
+                Change Password
+              </Button>
+            ) : (
+              <form onSubmit={handleChangePassword} className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label>Current Password</Label>
+                  <div className="relative">
+                    <Input
+                      type={showCurrentPw ? "text" : "password"}
+                      value={currentPw}
+                      onChange={(e) => setCurrentPw(e.target.value)}
+                      required
+                      className="pr-10"
+                      autoComplete="current-password"
+                    />
+                    <button type="button" onClick={() => setShowCurrentPw(!showCurrentPw)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                      {showCurrentPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>New Password</Label>
+                  <div className="relative">
+                    <Input
+                      type={showNewPw ? "text" : "password"}
+                      placeholder="At least 8 characters"
+                      value={newPw}
+                      onChange={(e) => setNewPw(e.target.value)}
+                      required
+                      className="pr-10"
+                      autoComplete="new-password"
+                    />
+                    <button type="button" onClick={() => setShowNewPw(!showNewPw)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                      {showNewPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Confirm New Password</Label>
+                  <Input
+                    type="password"
+                    value={confirmPw}
+                    onChange={(e) => setConfirmPw(e.target.value)}
+                    required
+                    autoComplete="new-password"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <Button type="button" variant="outline" onClick={() => {
+                    setShowPwForm(false);
+                    setCurrentPw(""); setNewPw(""); setConfirmPw("");
+                  }}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={pwSaving || !currentPw || !newPw || !confirmPw}>
+                    {pwSaving ? "Saving…" : "Update"}
+                  </Button>
+                </div>
+              </form>
+            )}
           </CardContent>
         </Card>
 
