@@ -19,7 +19,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       async authorize(credentials) {
         if (!credentials?.venmoHandle || !credentials?.password) return null;
         const handle = normalizeHandle(credentials.venmoHandle as string);
-        const user = await prisma.user.findUnique({ where: { venmoHandle: handle } });
+        const user = await prisma.user.findFirst({ where: { venmoHandle: handle } });
         if (!user || !user.password) return null;
         const valid = await bcrypt.compare(credentials.password as string, user.password);
         if (!valid) return null;

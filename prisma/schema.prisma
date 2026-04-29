@@ -12,7 +12,7 @@ model User {
   email       String?  @unique
   password    String?
   avatarUrl   String?
-  venmoHandle String?  @unique  // primary login identifier
+  venmoHandle String?  // primary login identifier — uniqueness enforced in app code
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

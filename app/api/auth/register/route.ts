@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
       ? venmoHandle.trim()
       : `@${venmoHandle.trim()}`;
 
-    const existing = await prisma.user.findUnique({ where: { venmoHandle: handle } });
+    const existing = await prisma.user.findFirst({ where: { venmoHandle: handle } });
     if (existing) {
       return NextResponse.json({ error: "An account with this Venmo handle already exists" }, { status: 400 });
     }
