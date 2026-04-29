@@ -35,7 +35,7 @@ function formatPhone(raw: string) {
 }
 
 function openVenmoRequest(contact: ContactWithBalance, effectiveCents: number) {
-  const note = `Hey ${contact.name.split(" ")[0]}! Here's your share from Tally 🧾`;
+  const note = `Hey ${contact.name.split(" ")[0]}! Here's your share from Tally`;
   const deepLink = buildVenmoRequestUrl({ handle: contact.venmoHandle!, amountCents: effectiveCents, note });
   const webUrl = buildVenmoWebUrl({ handle: contact.venmoHandle!, amountCents: effectiveCents, note });
   window.location.href = deepLink;
@@ -43,7 +43,7 @@ function openVenmoRequest(contact: ContactWithBalance, effectiveCents: number) {
 }
 
 function openVenmoPay(handle: string, amountCents: number, name: string) {
-  const note = `Settling up with ${name.split(" ")[0]} via Tally 🧾`;
+  const note = `Settling up with ${name.split(" ")[0]} via Tally`;
   const deepLink = buildVenmoPayUrl({ handle, amountCents, note });
   const webUrl = buildVenmoWebUrl({ handle, amountCents, note });
   window.location.href = deepLink;

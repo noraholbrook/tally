@@ -5,9 +5,15 @@
  * txn=charge  → you are requesting money FROM the recipient
  * txn=pay     → you are sending money TO the recipient
  */
-/** Encode a Venmo note: spaces become +, special chars are percent-encoded */
+/** Encode a Venmo note: use literal spaces, only escape & and # */
 function encodeVenmoNote(note: string): string {
-  return encodeURIComponent(note).replace(/%20/g, "+");
+  // Strip non-ASCII (emojis break Venmo deep links)
+  // Keep literal spaces — Venmo handles them correctly in deep links
+  return note
+    .replace(/[^\x20-\x7E]/g, "")
+    .trim()
+    .replace(/&/g, "%26")
+    .replace(/#/g, "%23");
 }
 
 export function buildVenmoRequestUrl({
