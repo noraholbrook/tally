@@ -6,12 +6,14 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   try {
-    const { name, email, password } = await req.json();
+    const { name, email, password, venmoHandle } = await req.json();
 
     if (!name || !email || !password) {
       return NextResponse.json({ error: "Name, email and password are required" }, { status: 400 });
     }
-
+    if (!venmoHandle) {
+      return NextResponse.json({ error: "Venmo handle is required" }, { status: 400 });
+    }
     if (password.length < 8) {
       return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 });
     }
@@ -22,8 +24,17 @@ export async function POST(req: NextRequest) {
     }
 
     const hashed = await bcrypt.hash(password, 12);
-    await prisma.user.create({
-      data: { name, email, password: hashed },
+    const handle = venmoHandle.startsWith("@") ? venmoHandle : `@${venmoHandle}`;
+
+    const user = await prisma.user.create({
+      data: { name, email, password: hashed, venmoHandle: handle },
+    });
+
+    // Back-link any contacts other users created with this email
+    // so their "you owe" balances appear immediately
+    await prisma.contact.updateMany({
+      where: { email, linkedUserId: null },
+      data: { linkedUserId: user.id },
     });
 
     return NextResponse.json({ success: true });

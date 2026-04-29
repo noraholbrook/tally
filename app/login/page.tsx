@@ -14,6 +14,7 @@ export default function LoginPage() {
   const [tab, setTab] = useState<"signin" | "signup">("signin");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [venmoHandle, setVenmoHandle] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
@@ -44,14 +45,13 @@ export default function LoginPage() {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name, email, password, venmoHandle }),
       });
       const data = await res.json();
       if (!res.ok) {
         setError(data.error ?? "Failed to create account");
         return;
       }
-      // Auto sign-in after registration
       const result = await signIn("credentials", { email, password, redirect: false });
       if (result?.error) {
         setError("Account created! Please sign in.");
@@ -91,16 +91,31 @@ export default function LoginPage() {
         {/* Form */}
         <form onSubmit={tab === "signin" ? handleSignIn : handleSignUp} className="space-y-4">
           {tab === "signup" && (
-            <div className="space-y-1.5">
-              <Label>Your Name</Label>
-              <Input
-                placeholder="Alex Johnson"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                autoComplete="name"
-              />
-            </div>
+            <>
+              <div className="space-y-1.5">
+                <Label>Your Name</Label>
+                <Input
+                  placeholder="Alex Johnson"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  autoComplete="name"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Venmo Handle <span className="text-destructive">*</span></Label>
+                <Input
+                  placeholder="@yourhandle"
+                  value={venmoHandle}
+                  onChange={(e) => setVenmoHandle(e.target.value)}
+                  required
+                  autoComplete="off"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Required so friends can pay you back directly via Venmo
+                </p>
+              </div>
+            </>
           )}
           <div className="space-y-1.5">
             <Label>Email</Label>
@@ -140,7 +155,9 @@ export default function LoginPage() {
           )}
 
           <Button type="submit" className="w-full h-12 text-base" disabled={isPending}>
-            {isPending ? (tab === "signin" ? "Signing in…" : "Creating account…") : (tab === "signin" ? "Sign In" : "Create Account")}
+            {isPending
+              ? (tab === "signin" ? "Signing in…" : "Creating account…")
+              : (tab === "signin" ? "Sign In" : "Create Account")}
           </Button>
         </form>
       </div>
