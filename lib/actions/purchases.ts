@@ -12,10 +12,10 @@ export async function createPurchase(formData: FormData) {
   const raw = {
     merchant: formData.get("merchant") as string,
     amount: formData.get("amount") as string,
-    tax: formData.get("tax") as string,
-    tip: formData.get("tip") as string,
-    categoryId: formData.get("categoryId") as string,
-    notes: formData.get("notes") as string,
+    tax: (formData.get("tax") as string) ?? "0",
+    tip: (formData.get("tip") as string) ?? "0",
+    categoryId: (formData.get("categoryId") as string) ?? undefined,
+    notes: (formData.get("notes") as string) ?? undefined,
     date: formData.get("date") as string,
     source: (formData.get("source") as string) ?? PurchaseSource.MANUAL,
   };
