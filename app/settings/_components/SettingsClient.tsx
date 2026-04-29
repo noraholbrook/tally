@@ -82,7 +82,6 @@ export function SettingsClient({ user, stats }: SettingsClientProps) {
                   <ContactAvatar name={user.name} size="lg" className="h-16 w-16 text-xl" />
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-lg">{user.name}</p>
-                    <p className="text-sm text-muted-foreground">{user.email}</p>
                     {user.venmoHandle ? (
                       <Badge variant="secondary" className="mt-1 text-xs">{user.venmoHandle}</Badge>
                     ) : (

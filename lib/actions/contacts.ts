@@ -5,10 +5,11 @@ import { prisma } from "@/lib/db";
 import { getCurrentUserId } from "@/lib/auth-utils";
 import { contactSchema } from "@/lib/validations/contact";
 
-/** If the contact's email matches a registered user, link them. */
-async function tryAutoLink(contactId: string, email: string | null | undefined) {
-  if (!email) return;
-  const matchedUser = await prisma.user.findUnique({ where: { email } });
+/** If the contact's Venmo handle matches a registered user, link them. */
+async function tryAutoLink(contactId: string, venmoHandle: string | null | undefined) {
+  if (!venmoHandle) return;
+  const handle = venmoHandle.startsWith("@") ? venmoHandle : `@${venmoHandle}`;
+  const matchedUser = await prisma.user.findUnique({ where: { venmoHandle: handle } });
   if (matchedUser) {
     await prisma.contact.update({
       where: { id: contactId },
@@ -65,7 +66,7 @@ export async function createContact(formData: FormData) {
     data: { userId, ...data },
   });
 
-  await tryAutoLink(contact.id, data.email);
+  await tryAutoLink(contact.id, data.venmoHandle);
 
   revalidatePath("/contacts");
   return { contactId: contact.id };
@@ -90,7 +91,7 @@ export async function updateContact(id: string, formData: FormData) {
   };
 
   await prisma.contact.update({ where: { id }, data });
-  await tryAutoLink(id, data.email);
+  await tryAutoLink(id, data.venmoHandle);
 
   revalidatePath("/contacts");
   revalidatePath(`/contacts/${id}`);

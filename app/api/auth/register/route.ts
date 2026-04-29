@@ -6,34 +6,32 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   try {
-    const { name, email, password, venmoHandle } = await req.json();
+    const { name, venmoHandle, password } = await req.json();
 
-    if (!name || !email || !password) {
-      return NextResponse.json({ error: "Name, email and password are required" }, { status: 400 });
-    }
-    if (!venmoHandle) {
-      return NextResponse.json({ error: "Venmo handle is required" }, { status: 400 });
+    if (!name || !venmoHandle || !password) {
+      return NextResponse.json({ error: "Name, Venmo handle and password are required" }, { status: 400 });
     }
     if (password.length < 8) {
       return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 });
     }
 
-    const existing = await prisma.user.findUnique({ where: { email } });
+    const handle = venmoHandle.trim().startsWith("@")
+      ? venmoHandle.trim()
+      : `@${venmoHandle.trim()}`;
+
+    const existing = await prisma.user.findUnique({ where: { venmoHandle: handle } });
     if (existing) {
-      return NextResponse.json({ error: "An account with this email already exists" }, { status: 400 });
+      return NextResponse.json({ error: "An account with this Venmo handle already exists" }, { status: 400 });
     }
 
     const hashed = await bcrypt.hash(password, 12);
-    const handle = venmoHandle.startsWith("@") ? venmoHandle : `@${venmoHandle}`;
-
     const user = await prisma.user.create({
-      data: { name, email, password: hashed, venmoHandle: handle },
+      data: { name, venmoHandle: handle, password: hashed },
     });
 
-    // Back-link any contacts other users created with this email
-    // so their "you owe" balances appear immediately
+    // Back-link any contacts other users created with this Venmo handle
     await prisma.contact.updateMany({
-      where: { email, linkedUserId: null },
+      where: { venmoHandle: handle, linkedUserId: null },
       data: { linkedUserId: user.id },
     });
 

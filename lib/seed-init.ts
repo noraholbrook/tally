@@ -24,16 +24,19 @@ export async function ensureSeeded() {
     });
   }
 
-  // Backfill linkedUserId: link contacts whose email matches a registered user.
+  // Backfill linkedUserId: link contacts whose Venmo handle matches a registered user.
   // Runs on every startup but is a no-op once all contacts are linked.
   const unlinked = await prisma.contact.findMany({
-    where: { email: { not: null }, linkedUserId: null },
-    select: { id: true, email: true },
+    where: { venmoHandle: { not: null }, linkedUserId: null },
+    select: { id: true, venmoHandle: true },
   });
 
   for (const contact of unlinked) {
+    const handle = contact.venmoHandle!.startsWith("@")
+      ? contact.venmoHandle!
+      : `@${contact.venmoHandle!}`;
     const matched = await prisma.user.findUnique({
-      where: { email: contact.email! },
+      where: { venmoHandle: handle },
       select: { id: true },
     });
     if (matched) {

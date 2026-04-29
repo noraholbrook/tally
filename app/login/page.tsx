@@ -13,7 +13,6 @@ export default function LoginPage() {
   const router = useRouter();
   const [tab, setTab] = useState<"signin" | "signup">("signin");
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
   const [venmoHandle, setVenmoHandle] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -25,12 +24,12 @@ export default function LoginPage() {
     setError("");
     startTransition(async () => {
       const result = await signIn("credentials", {
-        email,
+        venmoHandle,
         password,
         redirect: false,
       });
       if (result?.error) {
-        setError("Invalid email or password");
+        setError("Invalid Venmo handle or password");
       } else {
         router.push("/");
         router.refresh();
@@ -45,14 +44,14 @@ export default function LoginPage() {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password, venmoHandle }),
+        body: JSON.stringify({ name, venmoHandle, password }),
       });
       const data = await res.json();
       if (!res.ok) {
         setError(data.error ?? "Failed to create account");
         return;
       }
-      const result = await signIn("credentials", { email, password, redirect: false });
+      const result = await signIn("credentials", { venmoHandle, password, redirect: false });
       if (result?.error) {
         setError("Account created! Please sign in.");
         setTab("signin");
@@ -91,43 +90,35 @@ export default function LoginPage() {
         {/* Form */}
         <form onSubmit={tab === "signin" ? handleSignIn : handleSignUp} className="space-y-4">
           {tab === "signup" && (
-            <>
-              <div className="space-y-1.5">
-                <Label>Your Name</Label>
-                <Input
-                  placeholder="Alex Johnson"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                  autoComplete="name"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Venmo Handle <span className="text-destructive">*</span></Label>
-                <Input
-                  placeholder="@yourhandle"
-                  value={venmoHandle}
-                  onChange={(e) => setVenmoHandle(e.target.value)}
-                  required
-                  autoComplete="off"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Required so friends can pay you back directly via Venmo
-                </p>
-              </div>
-            </>
+            <div className="space-y-1.5">
+              <Label>Your Name</Label>
+              <Input
+                placeholder="Alex Johnson"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                autoComplete="name"
+              />
+            </div>
           )}
+
           <div className="space-y-1.5">
-            <Label>Email</Label>
+            <Label>Venmo Handle</Label>
             <Input
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              placeholder="@yourhandle"
+              value={venmoHandle}
+              onChange={(e) => setVenmoHandle(e.target.value)}
               required
-              autoComplete="email"
+              autoComplete="username"
+              autoCapitalize="none"
             />
+            {tab === "signup" && (
+              <p className="text-xs text-muted-foreground">
+                This is how friends find you and pay you back
+              </p>
+            )}
           </div>
+
           <div className="space-y-1.5">
             <Label>Password</Label>
             <div className="relative">
