@@ -35,7 +35,7 @@ export async function ensureSeeded() {
     const handle = contact.venmoHandle!.startsWith("@")
       ? contact.venmoHandle!
       : `@${contact.venmoHandle!}`;
-    const matched = await prisma.user.findUnique({
+    const matched = await prisma.user.findFirst({
       where: { venmoHandle: handle },
       select: { id: true },
     });

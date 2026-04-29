@@ -9,7 +9,7 @@ import { contactSchema } from "@/lib/validations/contact";
 async function tryAutoLink(contactId: string, venmoHandle: string | null | undefined) {
   if (!venmoHandle) return;
   const handle = venmoHandle.startsWith("@") ? venmoHandle : `@${venmoHandle}`;
-  const matchedUser = await prisma.user.findUnique({ where: { venmoHandle: handle } });
+  const matchedUser = await prisma.user.findFirst({ where: { venmoHandle: handle } });
   if (matchedUser) {
     await prisma.contact.update({
       where: { id: contactId },
