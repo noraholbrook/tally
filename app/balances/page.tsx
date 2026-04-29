@@ -5,7 +5,7 @@ import { BalancesClient } from "./_components/BalancesClient";
 
 export type YouOweItem = {
   creditorName: string;
-  creditorEmail: string;
+  creditorEmail: string | null;
   creditorUserId: string;
   creditorVenmoHandle: string | null;
   /** What they recorded you owe them (gross, before netting) */

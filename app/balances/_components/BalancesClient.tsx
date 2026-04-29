@@ -181,7 +181,7 @@ export function BalancesClient({ contacts, youOweItems, counterDebtMap }: Balanc
                       <ContactAvatar name={item.creditorName} size="lg" />
                       <div>
                         <p className="font-bold">{item.creditorName}</p>
-                        <p className="text-xs text-muted-foreground">{item.creditorEmail}</p>
+                        <p className="text-xs text-muted-foreground">{item.creditorVenmoHandle ?? item.creditorEmail ?? ""}</p>
                       </div>
                     </div>
                     <div className="text-right">
