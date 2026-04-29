@@ -11,6 +11,3 @@ function createPrismaClient(): PrismaClient {
 export const prisma = globalForPrisma.prisma ?? createPrismaClient();
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
-
-// Demo user ID — in a real app this comes from the auth session
-export const DEMO_USER_ID = "demo-user";
