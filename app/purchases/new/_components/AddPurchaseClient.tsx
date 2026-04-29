@@ -145,31 +145,15 @@ export function AddPurchaseClient({ categories, contacts, recentContactIds = [] 
               )}
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
-              <div className="space-y-2 col-span-1">
-                <Label htmlFor="amount">Amount</Label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
-                  <Input id="amount" className="pl-8" placeholder="0.00" type="number" step="0.01" min="0" {...form.register("amount")} />
-                </div>
-                {form.formState.errors.amount && (
-                  <p className="text-xs text-destructive">{form.formState.errors.amount.message}</p>
-                )}
+            <div className="space-y-2">
+              <Label htmlFor="amount">Amount</Label>
+              <div className="relative">
+                <DollarSign className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
+                <Input id="amount" className="pl-8" placeholder="0.00" type="number" step="0.01" min="0" {...form.register("amount")} />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="tax">Tax</Label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
-                  <Input id="tax" className="pl-8" placeholder="0.00" type="number" step="0.01" min="0" {...form.register("tax")} />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="tip">Tip</Label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
-                  <Input id="tip" className="pl-8" placeholder="0.00" type="number" step="0.01" min="0" {...form.register("tip")} />
-                </div>
-              </div>
+              {form.formState.errors.amount && (
+                <p className="text-xs text-destructive">{form.formState.errors.amount.message}</p>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-3">
